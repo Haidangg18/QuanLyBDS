@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Hóa đơn tháng {{ invoice.Thang }}/{{ invoice.Nam }} - Phòng {{ invoice.SoPhong }}{% endblock %}
+
+{% block content %}
+<div class="page-header no-print">
+    <h1 class="page-title"><i class="fa-solid fa-file-invoice" style="color: var(--accent);"></i> Chi Tiết Hóa Đơn</h1>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('shared_invoices', room_id=invoice.MaTaiSan) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Quay lại lịch sử</a>
+        <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="fa-solid fa-print"></i> In Hóa Đơn</button>
+    </div>
+</div>
+
+<div class="invoice-container">
+    <div class="invoice-header">
+        <div class="invoice-logo">
+            <i class="fa-solid fa-building-user"></i>
+            <span>Bất Động Sản Đăng Vy</span>
+        </div>
+        <div class="invoice-title">
+            HÓA ĐƠN TIỀN NHÀ & DỊCH VỤ<br>
+            <small style="font-weight: normal; font-size: 1rem; color: #64748b;">Kỳ thanh toán: Tháng {{ invoice.Thang }}/{{ invoice.Nam }}</small>
+        </div>
+    </div>
+
+    <div class="invoice-meta">
+        <div class="meta-box">
+            <h4><i class="fa-solid fa-user-tag"></i> Thông tin khách hàng</h4>
+            <p><strong>Khách thuê:</strong> {{ invoice.TenKhach }}</p>
+            <p><strong>Số điện thoại:</strong> {{ invoice.SoDienThoai }}</p>
+        </div>
+        <div class="meta-box">
+            <h4><i class="fa-solid fa-house-user"></i> Thông tin phòng thuê</h4>
+            <p><strong>Phòng:</strong> {{ invoice.SoPhong }}</p>
+            <p><strong>Địa chỉ:</strong> {{ invoice.DiaChi }} ({{ invoice.KhuVuc }})</p>
+        </div>
+        <div class="meta-box">
+            <h4><i class="fa-solid fa-barcode"></i> Thông tin hóa đơn</h4>
+            <p><strong>Mã HĐ:</strong> INV-{{ '%05d' % invoice.MaHoaDon }}</p>
+            <p><strong>Ngày lập:</strong> {{ invoice.NgayTao }}</p>
+            <p>
+                <strong>Trạng thái:</strong> 
+                {% if invoice.TrangThaiThanhToan == 'Đã thanh toán' %}
+                    <span style="color: var(--success); font-weight: bold;"><i class="fa-solid fa-check-double"></i> Đã thanh toán</span>
+                {% else %}
+                    <span style="color: var(--danger); font-weight: bold;"><i class="fa-solid fa-circle-exclamation"></i> Chưa thanh toán</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="invoice-table-wrapper">
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Nội Dung Khoản Thu</th>
+                    <th style="text-align: center;">Đơn Vị / Số Lượng</th>
+                    <th style="text-align: right;">Đơn Giá (VND)</th>
+                    <th style="text-align: right;">Thành Tiền (VND)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Tiền nhà -->
+                <tr>
+                    <td style="text-align: center;">1</td>
+                    <td>
+                        <strong>Tiền thuê phòng tháng {{ invoice.Thang }}/{{ invoice.Nam }}</strong>
+                    </td>
+                    <td style="text-align: center;">1 tháng</td>
+                    <td style="text-align: right;">{{ "{:,.2f}".format(invoice.TienNha) }}</td>
+                    <td style="text-align: right;"><strong>{{ "{:,.2f}".format(invoice.TienNha) }}</strong></td>
+                </tr>
+                
+                <!-- Tiền điện -->
+                <tr>
+                    <td style="text-align: center;">2</td>
+                    <td>
+                        <strong>Tiền điện sinh hoạt</strong>
+                    </td>
+                    <td style="text-align: center;">{{ invoice.SoDien }} kWh</td>
+                    <td style="text-align: right;">{{ "{:,.0f}".format(invoice.GiaDien) }}</td>
+                    <td style="text-align: right;"><strong>{{ "{:,.2f}".format(invoice.TienDien) }}</strong></td>
+                </tr>
+
+                <!-- Tiền dịch vụ -->
+                <tr>
+                    <td style="text-align: center;">3</td>
+                    <td>
+                        <strong>Tiền dịch vụ chung</strong>
+                        <div style="font-size: 0.85rem; color: #64748b;">(Rác, wifi, vệ sinh chung, máy giặt...)</div>
+                    </td>
+                    <td style="text-align: center;">1 gói</td>
+                    <td style="text-align: right;">{{ "{:,.0f}".format(invoice.GiaDichVu) }}</td>
+                    <td style="text-align: right;"><strong>{{ "{:,.2f}".format(invoice.TienDichVu) }}</strong></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="text-align: right; font-size: 1.25rem;"><strong>TỔNG CỘNG PHẢI THANH TOÁN:</strong></td>
+                    <td style="text-align: right; font-size: 1.5rem; color: var(--accent);"><strong>{{ "{:,.2f}".format(invoice.TongTien) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="invoice-footer">
+        <p>Quý khách vui lòng thanh toán đúng hạn quy định của hợp đồng (thường từ mùng 1 đến mùng 5 hàng tháng). Xin cảm ơn!</p>
+        <p style="margin-top: 1rem; font-style: italic; color: #94a3b8; font-size: 0.9rem;">Đây là hóa đơn điện tử tự động xuất từ hệ thống quản lý BĐS Đăng Vy.</p>
+    </div>
+</div>
+
+<style>
+/* CSS dành riêng cho giao diện hóa đơn xịn xò */
+.invoice-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    padding: 3rem;
+    max-width: 900px;
+    margin: 0 auto 2rem auto;
+    border-top: 8px solid var(--accent);
+}
+
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 2rem;
+    margin-bottom: 2rem;
+}
+
+.invoice-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.invoice-logo i {
+    font-size: 2rem;
+}
+
+.invoice-title {
+    text-align: right;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.invoice-meta {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+}
+
+.meta-box {
+    flex: 1;
+    min-width: 200px;
+    background: #f8fafc;
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.meta-box h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    font-size: 1rem;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 0.5rem;
+}
+
+.meta-box p {
+    margin: 0.25rem 0;
+    font-size: 0.95rem;
+}
+
+.invoice-table-wrapper {
+    margin-bottom: 2rem;
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.invoice-table th {
+    background: #f1f5f9;
+    color: var(--text-primary);
+    padding: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.invoice-table td {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--text-primary);
+}
+
+.invoice-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.invoice-table tfoot td {
+    padding: 1.5rem 1rem;
+    background: #f8fafc;
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.invoice-footer {
+    text-align: center;
+    border-top: 2px dashed #cbd5e1;
+    padding-top: 2rem;
+    color: var(--text-secondary);
+}
+
+/* CSS cho khi In (Ctrl + P) */
+@media print {
+    body {
+        background: #fff;
+    }
+    .no-print, .navbar, footer {
+        display: none !important;
+    }
+    .invoice-container {
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        border-top: none;
+        max-width: 100%;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm tài sản mới - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-house-medical" style="color: var(--accent);"></i> Thêm Tài Sản Mới</h1>
+    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại bảng theo dõi</a>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-hotel"></i> Khai báo thông tin tài sản mới</h3>
+    <form action="{{ url_for('shared_room_add') }}" method="POST">
+        
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="property_type" class="form-label">Loại hình bất động sản *</label>
+                <select id="property_type" name="property_type" class="form-control" required>
+                    <option value="1">Phòng trọ cho thuê</option>
+                    <option value="2">Nhà nguyên căn</option>
+                    <option value="3">Mặt bằng kinh doanh</option>
+                </select>
+            </div>
+            <div class="form-col form-group">
+                <label for="room_code" class="form-label">Mã số tài sản (Duy nhất) *</label>
+                <input type="text" id="room_code" name="room_code" class="form-control" value="{{ suggested_code }}" readonly style="background-color: #f1f5f9; cursor: not-allowed; color: var(--text-secondary); font-weight: bold;">
+                <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">Hệ thống tự động sinh mã</small>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="area" class="form-label">Khu vực *</label>
+                <input type="text" id="area" name="area" list="area-options" class="form-control" placeholder="Ví dụ: ĐÔNG THIÊN, VĨNH HƯNG..." autocomplete="off" required>
+                <datalist id="area-options">
+                    {% for a in areas %}
+                    <option value="{{ a }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div class="form-col form-group">
+                <label for="address" class="form-label">Địa chỉ chi tiết *</label>
+                <input type="text" id="address" name="address" class="form-control" placeholder="Ví dụ: 64 Đông Thiên..." required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="room_number" class="form-label">Số phòng/Tên phòng *</label>
+                <input type="text" id="room_number" name="room_number" class="form-control" placeholder="Ví dụ: 201, Mặt bằng 1..." required>
+            </div>
+            <div class="form-col form-group">
+                <label for="floor" class="form-label">Tầng *</label>
+                <input type="number" id="floor" name="floor" class="form-control" min="1" placeholder="Ví dụ: 1, 2..." required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="rent_price" class="form-label">Giá thuê gốc (Đơn vị: k VND/Tháng) *</label>
+                <input type="number" step="100" id="rent_price" name="rent_price" class="form-control" placeholder="Ví dụ: 2500 (là 2.5 triệu)..." required>
+            </div>
+            <div class="form-col form-group">
+                <label for="commission" class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span>Hoa hồng Sale (Đơn vị: k VND) *</span>
+                    <button type="button" class="btn btn-sm" style="padding: 0.1rem 0.5rem; font-size: 0.75rem; background-color: var(--accent); color: white; border: none; border-radius: 4px;" onclick="calc50()">50% Giá Thuê</button>
+                </label>
+                <input type="number" step="0.01" id="commission" name="commission" class="form-control" placeholder="Ví dụ: 500 (là 500k)..." required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="payment_day" class="form-label">Hạn ca thanh toán (Chốt tiền lẻ ngày) *</label>
+            <select id="payment_day" name="payment_day" class="form-control" required>
+                <option value="5">Mùng 5 hàng tháng</option>
+                <option value="10">Mùng 10 hàng tháng</option>
+                <option value="15">Mùng 15 hàng tháng</option>
+                <option value="20">Mùng 20 hàng tháng</option>
+                <option value="25">Mùng 25 hàng tháng</option>
+                <option value="30">Mùng 30 hàng tháng</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="devices" class="form-label">Danh sách trang thiết bị ban đầu</label>
+            <input type="text" id="devices" name="devices" class="form-control" placeholder="Ví dụ: vsc - đh, giường gỗ, tủ lạnh...">
+        </div>
+
+        <div class="form-group">
+            <label for="notes" class="form-label">Ghi chú tài sản</label>
+            <textarea id="notes" name="notes" rows="3" class="form-control" placeholder="Nhập các ghi chú đặc biệt cho tài sản này..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <i class="fa-solid fa-circle-check"></i> Xác nhận thêm tài sản
+        </button>
+    </form>
+</div>
+
+<script>
+    function calc50() {
+        const rentPrice = parseFloat(document.getElementById('rent_price').value);
+        if (!isNaN(rentPrice)) {
+            document.getElementById('commission').value = rentPrice / 2;
+        } else {
+            alert('Vui lòng nhập giá thuê gốc trước khi tính 50%!');
+        }
+    }
+</script>
+{% endblock %}

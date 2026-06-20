@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh sửa Hợp Đồng - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-signature" style="color: var(--accent);"></i> Sửa thông tin hợp đồng</h1>
+    <a href="{{ url_for('shared_contracts') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <form action="{{ url_for('shared_contract_edit', contract_id=contract.MaHopDong) }}" method="POST">
+        
+        <h3 style="color: var(--text-primary); margin-bottom: 1rem;"><i class="fa-solid fa-user"></i> Thông tin khách thuê</h3>
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="tenant_name" class="form-label">Tên khách hàng *</label>
+                <input type="text" id="tenant_name" name="tenant_name" class="form-control" value="{{ tenant.HoTen }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="tenant_phone" class="form-label">Số điện thoại *</label>
+                <input type="text" id="tenant_phone" name="tenant_phone" class="form-control" value="{{ tenant.SoDienThoai }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="tenant_cccd" class="form-label">CCCD/CMND</label>
+                <input type="text" id="tenant_cccd" name="tenant_cccd" class="form-control" value="{{ tenant.CCCD or '' }}">
+            </div>
+        </div>
+
+        <h3 style="color: var(--text-primary); margin-bottom: 1rem; margin-top: 1.5rem;"><i class="fa-solid fa-file-contract"></i> Thông tin hợp đồng</h3>
+        
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="start_date" class="form-label">Ngày bắt đầu *</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ contract.NgayBatDau }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="end_date" class="form-label">Ngày kết thúc *</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ contract.NgayKetThuc }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="duration" class="form-label">Thời hạn (Tháng) *</label>
+                <input type="number" id="duration" name="duration" class="form-control" min="1" value="{{ contract.ThoiHanThue }}" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="rent_price" class="form-label">Giá thuê (VND) *</label>
+                <input type="number" id="rent_price" name="rent_price" class="form-control" min="0" value="{{ contract.GiaThue }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="deposit" class="form-label">Tiền cọc (VND)</label>
+                <input type="number" id="deposit" name="deposit" class="form-control" min="0" value="{{ contract.TienCoc or 0 }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes" class="form-label">Ghi chú hợp đồng</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Nhập ghi chú hoặc các điều khoản bổ sung...">{{ contract.GhiChu or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <i class="fa-solid fa-save"></i> Lưu thông tin hợp đồng
+        </button>
+    </form>
+</div>
+{% endblock %}

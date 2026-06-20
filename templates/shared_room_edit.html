@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa thông tin phòng - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-house-chimney-medical"></i> Sửa Thông Tin Phòng Trống</h1>
+    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại bảng theo dõi</a>
+</div>
+
+<div class="card" style="max-width: 700px; margin: 0 auto;">
+    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-pen-to-square"></i> Cập nhật chi tiết phòng</h3>
+    <form action="{{ url_for('shared_room_edit', room_id=room.MaTaiSan) }}" method="POST">
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="so_phong" class="form-label">Số phòng *</label>
+                <input type="text" id="so_phong" name="so_phong" class="form-control" value="{{ room.SoPhong }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="tang" class="form-label">Tầng *</label>
+                <input type="number" id="tang" name="tang" class="form-control" value="{{ room.Tang }}" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="dia_chi" class="form-label">Địa chỉ phòng *</label>
+            <input type="text" id="dia_chi" name="dia_chi" class="form-control" value="{{ room.DiaChi }}" required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="gia_thue" class="form-label">Giá phòng gốc (đơn vị: nghìn đồng, ví dụ: 2500) *</label>
+                <input type="number" step="100" id="gia_thue" name="gia_thue" class="form-control" value="{{ room.GiaThue }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="hoa_hong" class="form-label">Hoa hồng Sale (đơn vị: nghìn đồng, ví dụ: 500) *</label>
+                <input type="number" step="0.01" id="hoa_hong" name="hoa_hong" class="form-control" value="{{ room.HoaHong }}" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="nv_chot_cu" class="form-label">Nhân viên chốt cũ</label>
+                <select id="nv_chot_cu" name="nv_chot_cu" class="form-control">
+                    <option value="">-- Chọn nhân viên --</option>
+                    {% for u in users %}
+                        <option value="{{ u.MaTaiKhoan }}" {% if room.NhanVienChotCu == u.MaTaiKhoan %}selected{% endif %}>{{ u.HoTen }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-col form-group">
+                <label for="ngay_trong" class="form-label">Ngày trống</label>
+                <input type="date" id="ngay_trong" name="ngay_trong" class="form-control" value="{{ room.NgayTrong }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="thiet_bi" class="form-label">Mô tả thiết bị hiện tại</label>
+            <input type="text" id="thiet_bi" name="thiet_bi" class="form-control" value="{{ room.ThietBi if room.ThietBi else '' }}" placeholder="Ví dụ: vsc - đh, giường gỗ...">
+        </div>
+
+        <div class="form-group">
+            <label for="ghi_chu" class="form-label">Ghi chú đặc biệt</label>
+            <textarea id="ghi_chu" name="ghi_chu" rows="3" class="form-control" placeholder="Nhập ghi chú phòng trống...">{{ room.GhiChu if room.GhiChu else '' }}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+            </button>
+            <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary" style="flex: 1; text-align: center;">
+                Hủy bỏ
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+name: Python CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Thiết lập môi trường Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Cài đặt thư viện kiểm tra (Linting)
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Chạy kiểm tra lỗi cú pháp với flake8
+      run: |
+        # Dừng quá trình build nếu phát hiện các lỗi nghiêm trọng (syntax errors, undefined names)
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Chạy cảnh báo với các lỗi chuẩn code thông thường (warnings)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics

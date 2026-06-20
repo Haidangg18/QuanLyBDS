@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Vận hành - Ca thu tiền - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-calendar-check"></i> Dashboard Quản Lý Vận Hành</h1>
+    <span style="font-size: 0.95rem; color: var(--text-secondary);">Hệ thống ca chốt tiền cố định hàng tháng</span>
+</div>
+
+<div class="periods-grid">
+    <!-- Hộp ca mùng 5 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 5</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 5 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=5) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+
+    <!-- Hộp ca mùng 10 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 10</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 10 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=10) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+
+    <!-- Hộp ca mùng 15 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 15</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 15 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=15) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+
+    <!-- Hộp ca mùng 20 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 20</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 20 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=20) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+
+    <!-- Hộp ca mùng 25 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 25</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 25 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=25) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+
+    <!-- Hộp ca mùng 30 -->
+    <div class="period-card">
+        <div class="period-title"><i class="fa-regular fa-calendar-days" style="color: var(--info);"></i> Ca Mùng 30</div>
+        <p class="period-desc">Quản lý hóa đơn và hợp đồng chốt vào ngày 30 hàng tháng</p>
+        <a href="{{ url_for('manager_ca_thu', day=30) }}" class="btn btn-primary" style="width: 100%;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Truy cập ca thu
+        </a>
+    </div>
+</div>
+
+<!-- Bảng danh sách phòng trống -->
+<div class="card" style="margin-top: 2rem;">
+    <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-house-chimney-user"></i> Danh sách phòng trống</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Khu Vực</th>
+                    <th>Số Phòng</th>
+                    <th>Địa Chỉ</th>
+                    <th>Giá Thuê (VND)</th>
+                    <th>Thiết Bị</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if empty_rooms %}
+                    {% for room in empty_rooms %}
+                    <tr>
+                        <td>{{ room.KhuVuc }}</td>
+                        <td><strong>{{ room.SoPhong }}</strong></td>
+                        <td>{{ room.DiaChi }}</td>
+                        <td><span class="price-text">{{ "{:,.0f}".format(room.GiaThue) }}k</span></td>
+                        <td>{{ room.ThietBi or 'Chưa có' }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-secondary);">Hệ thống hiện không có phòng trống nào.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

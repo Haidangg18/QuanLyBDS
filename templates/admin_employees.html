@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý nhân sự - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-users-gear"></i> Quản Lý Tài Khoản Nhân Sự</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+</div>
+
+<!-- Form thêm mới tài khoản ở phía trên -->
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-user-plus"></i> Tạo tài khoản nhân sự mới</h3>
+    <form action="{{ url_for('admin_employees') }}" method="POST">
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="username" class="form-label">Tên đăng nhập *</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="Ví dụ: nva01..." required>
+            </div>
+            <div class="form-col form-group">
+                <label for="password" class="form-label">Mật khẩu *</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Nhập mật khẩu..." required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="fullname" class="form-label">Họ và tên *</label>
+                <input type="text" id="fullname" name="fullname" class="form-control" placeholder="Ví dụ: Nguyễn Văn A..." required>
+            </div>
+            <div class="form-col form-group">
+                <label for="phone" class="form-label">Số điện thoại</label>
+                <input type="tel" id="phone" name="phone" class="form-control" placeholder="Ví dụ: 0912345678...">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="role_id" class="form-label">Vai trò hệ thống *</label>
+            <select id="role_id" name="role_id" class="form-control" required>
+                <option value="" disabled selected>-- Chọn vai trò --</option>
+                <option value="1">Chủ doanh nghiệp / Admin</option>
+                <option value="2">Nhân viên quản lý / Vận hành</option>
+                <option value="3">Cộng tác viên / Sale (Môi giới)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+            <i class="fa-solid fa-user-check"></i> Tạo tài khoản mới
+        </button>
+    </form>
+</div>
+
+<!-- Bảng danh sách tài khoản ở phía dưới -->
+<div class="card">
+    <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-list-ul"></i> Danh sách tài khoản trong hệ thống</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Họ và tên</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Số điện thoại</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align: center; width: 180px;">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users %}
+                    {% for u in users %}
+                    <tr>
+                        <td><strong>{{ u.HoTen }}</strong></td>
+                        <td><code>{{ u.TenDangNhap }}</code></td>
+                        <td>{{ u.SoDienThoai if u.SoDienThoai else '-' }}</td>
+                        <td>
+                            {% if u.MaVaiTro == 1 %}
+                                <span class="user-role role-admin">Admin</span>
+                            {% elif u.MaVaiTro == 2 %}
+                                <span class="user-role role-manager">Vận hành</span>
+                            {% elif u.MaVaiTro == 3 %}
+                                <span class="user-role role-sale">Sale</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Khác ({{ u.MaVaiTro }})</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.TrangThai == 1 %}
+                                <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hoạt động</span>
+                            {% else %}
+                                <span class="badge badge-chuathanhtoan"><i class="fa-solid fa-circle-minus"></i> Đã khóa</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                                <a href="{{ url_for('admin_employees_edit', user_id=u.MaTaiKhoan) }}" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">
+                                    <i class="fa-solid fa-user-pen"></i> Sửa
+                                </a>
+                                {% if u.TenDangNhap == session.get('username') %}
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">(Bản thân)</span>
+                                {% else %}
+                                    <form action="{{ url_for('admin_employees_toggle', user_id=u.MaTaiKhoan) }}" method="POST" style="display: inline; margin: 0;">
+                                        {% if u.TrangThai == 1 %}
+                                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.75rem;">
+                                                <i class="fa-solid fa-lock"></i> Khóa
+                                            </button>
+                                        {% else %}
+                                            <button type="submit" class="btn btn-success btn-sm" style="padding: 0.35rem 0.75rem;">
+                                                <i class="fa-solid fa-lock-open"></i> Mở
+                                            </button>
+                                        {% endif %}
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary);">Không tìm thấy tài khoản nào.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

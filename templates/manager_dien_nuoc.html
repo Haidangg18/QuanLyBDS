@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Phòng Đang Cho Thuê - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        {% if room %}
+            <i class="fa-solid fa-calculator" style="color: var(--info);"></i> Ghi Chỉ Số Điện & Xuất Hóa Đơn
+        {% else %}
+            <i class="fa-solid fa-house-lock" style="color: var(--accent);"></i> Danh Sách Phòng Đang Cho Thuê
+        {% endif %}
+    </h1>
+    {% if room %}
+        <a href="{{ url_for('manager_dien_nuoc') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại danh sách phòng</a>
+    {% else %}
+        <a href="{{ url_for('manager_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+    {% endif %}
+</div>
+
+{% if room %}
+<!-- Giao diện Nhập chỉ số điện cho phòng cụ thể -->
+<div class="layout-split">
+    <!-- Cột trái: Form nhập số điện -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;"><i class="fa-regular fa-lightbulb"></i> Nhập số điện phòng {{ room.SoPhong }}</h3>
+        <form action="{{ url_for('manager_dien_nuoc_form', room_id=room.MaTaiSan) }}" method="POST">
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="month" class="form-label">Tháng tính tiền *</label>
+                    <select id="month" name="month" class="form-control" required>
+                        {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>Tháng {{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-col form-group">
+                    <label for="year" class="form-label">Năm tính tiền *</label>
+                    <input type="number" id="year" name="year" class="form-control" value="{{ current_year }}" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="old_index" class="form-label">Chỉ số điện cũ (kWh) *</label>
+                    <input type="number" id="old_index" name="old_index" class="form-control" value="{{ old_index }}" readonly>
+                    <small style="color: var(--text-muted);">Lấy tự động từ tháng trước hoặc số điện đầu vào.</small>
+                </div>
+                <div class="form-col form-group">
+                    <label for="new_index" class="form-label">Chỉ số điện mới (kWh) *</label>
+                    <input type="number" id="new_index" name="new_index" class="form-control" placeholder="Nhập chỉ số điện mới..." min="{{ old_index }}" oninput="calculatePower()" required>
+                </div>
+            </div>
+
+            <!-- Báo cáo tính thử hóa đơn -->
+            <div class="billing-summary" id="invoice-preview-box" style="display: none;">
+                <h4><i class="fa-solid fa-calculator"></i> Tính thử hóa đơn tháng</h4>
+                <div class="billing-item">
+                    <span>Tiền nhà cố định:</span>
+                    <span style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND</span>
+                </div>
+                <div class="billing-item">
+                    <span>Điện tiêu thụ:</span>
+                    <span id="preview-power" style="font-weight: 600; color: var(--text-primary);">0 kWh</span>
+                </div>
+                <div class="billing-item">
+                    <span>Đơn giá điện:</span>
+                    <span style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(active_config.GiaDien) }} VND/kWh</span>
+                </div>
+                <div class="billing-item">
+                    <span>Thành tiền điện:</span>
+                    <span id="preview-elec-fee" style="font-weight: 600; color: var(--text-primary);">0.00 VND</span>
+                </div>
+                <div class="billing-item">
+                    <span>Dịch vụ cố định:</span>
+                    <span style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(active_config.GiaDichVu) }} VND</span>
+                </div>
+                <div class="billing-total">
+                    <span>Tổng tiền hóa đơn:</span>
+                    <span id="preview-total">0.00 VND</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-info" style="width: 100%; margin-top: 1.5rem;">
+                <i class="fa-solid fa-receipt"></i> Xuất hóa đơn tháng
+            </button>
+        </form>
+    </div>
+
+    <!-- Cột phải: Thông tin đối chiếu phòng & hợp đồng -->
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-address-card"></i> Khách thuê hiện tại</h3>
+            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Họ tên khách:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ contract.HoTen }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số điện thoại:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;">{{ contract.SoDienThoai }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Mã số tài sản:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700;">{{ room.MaSoTaiSan }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ phòng:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-size: 0.9rem;">{{ room.DiaChi }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá phòng cố định:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn thanh toán:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info-text);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Giao diện hiển thị danh sách phòng đang thuê nhóm theo Ca thu -->
+<div style="display: flex; flex-direction: column; gap: 2rem;">
+    {% set ca_dates = [5, 10, 15, 20, 25, 30] %}
+    {% for day in ca_dates %}
+        <!-- Lọc phòng thuộc ca thu này -->
+        {% set ns = namespace(has_room=false) %}
+        {% for r in rooms %}
+            {% if r.HanThanhToan == day %}
+                {% set ns.has_room = true %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if ns.has_room %}
+        <div class="card" style="margin-bottom: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h3 style="color: var(--accent); margin: 0;"><i class="fa-regular fa-calendar-days"></i> CA THU MÙNG {{ day }}</h3>
+                <span class="badge badge-dangthue">Đến hạn chốt vào mùng {{ day }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr style="background: #f8fafc;">
+                            <th>Số phòng</th>
+                            <th>Khu Vực</th>
+                            <th>Địa chỉ phòng</th>
+                            <th>Giá phòng (VND)</th>
+                            <th>Tên khách thuê</th>
+                            <th>Số điện thoại</th>
+                            <th style="text-align: center; width: 280px;">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rooms %}
+                            {% if r.HanThanhToan == day %}
+                            <tr>
+                                <td><span class="badge badge-dangthue">Phòng {{ r.SoPhong }}</span></td>
+                                <td><strong>{{ r.KhuVuc }}</strong></td>
+                                <td>{{ r.DiaChi }}</td>
+                                <td style="font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(r.GiaThue) }}</td>
+                                <td><strong>{{ r.HoTenKhach }}</strong></td>
+                                <td>{{ r.SoDienThoaiKhach }}</td>
+                                <td style="text-align: center;">
+                                    <a href="{{ url_for('manager_dien_nuoc_form', room_id=r.MaTaiSan) }}" class="btn btn-info btn-sm">
+                                        <i class="fa-solid fa-calculator"></i> Ghi số điện & Xuất hóa đơn
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+    
+    <!-- Trường hợp không có phòng đang thuê nào -->
+    {% set ns_all = namespace(any_room=false) %}
+    {% if rooms %}
+        {% set ns_all.any_room = true %}
+    {% endif %}
+    {% if not ns_all.any_room %}
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <i class="fa-solid fa-house-circle-xmark" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <h3 style="color: var(--text-secondary);">Hiện không có phòng nào ở trạng thái "Đang thuê".</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Khi có khách đặt cọc giữ chỗ và được vận hành ký hợp đồng chính thức, các phòng đó sẽ xuất hiện tại đây.</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if room %}
+<script>
+const giaThue = parseFloat("{{ room.GiaThue }}");
+const giaDien = parseFloat("{{ active_config.GiaDien }}");
+const giaDichVu = parseFloat("{{ active_config.GiaDichVu }}");
+const oldIndex = parseFloat("{{ old_index }}");
+
+function calculatePower() {
+    const newIndexInput = parseFloat(document.getElementById('new_index').value);
+    const previewBox = document.getElementById('invoice-preview-box');
+    
+    if (isNaN(newIndexInput) || newIndexInput < oldIndex) {
+        previewBox.style.display = 'none';
+        return;
+    }
+    
+    previewBox.style.display = 'block';
+    
+    const powerConsumed = newIndexInput - oldIndex;
+    const elecFee = powerConsumed * giaDien;
+    const totalInvoice = giaThue + (elecFee / 1000.0) + (giaDichVu / 1000.0); // Chuyển đổi đơn vị tiền k
+    
+    document.getElementById('preview-power').innerText = powerConsumed + " kWh";
+    document.getElementById('preview-elec-fee').innerText = formatCurrency(elecFee / 1000.0) + " VND";
+    document.getElementById('preview-total').innerText = formatCurrency(totalInvoice) + " VND";
+}
+
+function formatCurrency(value) {
+    return (value * 1000.0).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+</script>
+{% endif %}
+{% endblock %}

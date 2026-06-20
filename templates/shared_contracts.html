@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách Hợp Đồng - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> Quản Lý Danh Sách Hợp Đồng</h1>
+    <span style="font-size: 0.95rem; color: var(--text-secondary);">Tổng số hợp đồng: {{ contracts|length }} bản ghi</span>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
+                    <th>Mã HĐ</th>
+                    <th>Số Phòng</th>
+                    <th>Địa Chỉ Phòng</th>
+                    <th>Khách Thuê</th>
+                    <th>Số Điện Thoại</th>
+                    <th>Ngày Bắt Đầu</th>
+                    <th>Ngày Kết Thúc</th>
+                    <th>Thời Hạn (Tháng)</th>
+                    <th>Giá Thuê (VND)</th>
+                    <th>Trạng Thái</th>
+                    <th>Ghi Chú</th>
+                    <th>Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if contracts %}
+                    {% for c in contracts %}
+                    <tr>
+                        <td><code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code></td>
+                        <td><span class="badge badge-dangthue">Phòng {{ c.SoPhong }}</span></td>
+                        <td>{{ c.DiaChi }} ({{ c.KhuVuc }})</td>
+                        <td><strong>{{ c.TenKhach }}</strong></td>
+                        <td>{{ c.SoDienThoai }}</td>
+                        <td>{{ c.NgayBatDau }}</td>
+                        <td>{{ c.NgayKetThuc }}</td>
+                        <td>{{ c.ThoiHanThue }} tháng</td>
+                        <td style="font-weight: 700; color: var(--warning-text);">{{ "{:,.0f}".format(c.GiaThue) }}</td>
+                        <td>
+                            {% if c.TrangThai == 'Đang kích hoạt' %}
+                                <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hiệu lực</span>
+                            {% elif c.TrangThai == 'Giữ phòng' %}
+                                <span class="badge badge-datcoc"><i class="fa-solid fa-clock"></i> Giữ phòng</span>
+                            {% elif c.TrangThai == 'Bỏ cọc' %}
+                                <span class="badge badge-chuathanhtoan"><i class="fa-solid fa-hand-fist"></i> Bỏ cọc/Phá HĐ</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Đã thanh lý</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.GhiChu %}
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ c.GhiChu }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.TrangThai == 'Đang kích hoạt' %}
+                            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                                <a href="{{ url_for('shared_contract_edit', contract_id=c.MaHopDong) }}" class="btn btn-sm btn-primary">
+                                    <i class="fa-solid fa-pen-to-square"></i> Sửa
+                                </a>
+                                <form action="{{ url_for('shared_contract_terminate', contract_id=c.MaHopDong) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn thanh lý hợp đồng này? Thao tác này sẽ chuyển phòng về trạng thái Trống để Sale bắt đầu tìm khách.');">
+                                    <button type="submit" class="btn btn-sm" style="background-color: #0284c7; color: white;">
+                                        <i class="fa-solid fa-power-off"></i> Thanh lý
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('shared_contract_forfeit', contract_id=c.MaHopDong) }}" method="POST" onsubmit="return confirm('Xác nhận khách thuê bỏ cọc/phá hợp đồng giữa chừng? Thao tác này sẽ giải phóng phòng và chuyển về trạng thái Trống.');">
+                                    <button type="submit" class="btn btn-sm" style="background-color: var(--danger); color: white;">
+                                        <i class="fa-solid fa-hand-fist"></i> Bỏ cọc
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif c.TrangThai == 'Giữ phòng' %}
+                            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                                <a href="{{ url_for('shared_contract_edit', contract_id=c.MaHopDong) }}" class="btn btn-sm btn-primary">
+                                    <i class="fa-solid fa-pen-to-square"></i> Sửa
+                                </a>
+                                <form action="{{ url_for('shared_contract_forfeit', contract_id=c.MaHopDong) }}" method="POST" onsubmit="return confirm('Xác nhận khách huỷ giữ phòng và bỏ cọc? Thao tác này sẽ giải phóng phòng và chuyển về trạng thái Trống.');">
+                                    <button type="submit" class="btn btn-sm" style="background-color: var(--danger); color: white;">
+                                        <i class="fa-solid fa-hand-fist"></i> Bỏ cọc
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="12" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy hợp đồng nào trong hệ thống.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

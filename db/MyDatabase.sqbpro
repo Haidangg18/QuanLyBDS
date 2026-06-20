@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="MyDatabase.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="0"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="676"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title=".Browsables" custom_title="0" dock_id="1" table="0,10:Browsables"/><dock_state state="000000ff00000000fd00000001000000020000043c000002b6fc0100000001fb000000160064006f0063006b00420072006f007700730065003101000000000000043c0000011800ffffff000002580000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">
+-- =====================================
+-- BẢNG 1: VAI_TRO
+-- =====================================
+CREATE TABLE VAI_TRO
+(
+    MaVaiTro INTEGER PRIMARY KEY AUTOINCREMENT,
+    TenVaiTro VARCHAR(50) NOT NULL
+);
+
+-- =====================================
+-- BẢNG 2: TAI_KHOAN
+-- =====================================
+CREATE TABLE TAI_KHOAN
+(
+    MaTaiKhoan INTEGER PRIMARY KEY AUTOINCREMENT,
+    TenDangNhap VARCHAR(50) NOT NULL UNIQUE,
+    MatKhau VARCHAR(255) NOT NULL,
+    HoTen VARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15),
+    MaVaiTro INT NOT NULL,
+    TrangThai TINYINT(1) DEFAULT 1,
+
+    CONSTRAINT FK_TAIKHOAN_VAITRO
+        FOREIGN KEY (MaVaiTro)
+        REFERENCES VAI_TRO(MaVaiTro)
+);
+
+-- =====================================
+-- BẢNG 3: LOAI_TAI_SAN
+-- =====================================
+CREATE TABLE LOAI_TAI_SAN
+(
+    MaLoaiTaiSan INTEGER PRIMARY KEY AUTOINCREMENT,
+    TenLoaiTaiSan VARCHAR(50) NOT NULL
+);
+
+-- =====================================
+-- BẢNG 4: TAI_SAN
+-- =====================================
+CREATE TABLE TAI_SAN
+(
+    MaTaiSan INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaLoaiTaiSan INT NOT NULL,
+    MaSoTaiSan VARCHAR(20) NOT NULL UNIQUE,
+    KhuVuc VARCHAR(100),
+    DiaChi VARCHAR(255) NOT NULL,
+    SoPhong VARCHAR(20),
+    Tang INT,
+    GiaThue DECIMAL(18,2) NOT NULL,
+    HoaHong DECIMAL(18,2) DEFAULT 0.00,
+    NgayTrong DATE,
+    DaTungChoThue TINYINT(1) DEFAULT 0,
+    TrangThai VARCHAR(50),
+    NhanVienChotCu INT,
+    HanThanhToan INT,
+    ThietBi TEXT,
+    GhiChu VARCHAR(500),
+    MoTa TEXT,
+
+    CONSTRAINT FK_TAISAN_LOAITAISAN
+        FOREIGN KEY (MaLoaiTaiSan)
+        REFERENCES LOAI_TAI_SAN(MaLoaiTaiSan),
+
+    CONSTRAINT FK_TAISAN_NHANVIENCHOTCU
+        FOREIGN KEY (NhanVienChotCu)
+        REFERENCES TAI_KHOAN(MaTaiKhoan)
+);
+
+-- =====================================
+-- BẢNG 5: KHACH_THUE
+-- =====================================
+CREATE TABLE KHACH_THUE
+(
+    MaKhachThue INTEGER PRIMARY KEY AUTOINCREMENT,
+    HoTen VARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15) NOT NULL,
+    CCCD VARCHAR(20),
+    NgaySinh DATE,
+    DiaChiThuongTru VARCHAR(255),
+    GhiChu VARCHAR(500)
+);
+
+-- =====================================
+-- BẢNG 6: HOP_DONG
+-- =====================================
+CREATE TABLE HOP_DONG
+(
+    MaHopDong INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaTaiSan INT NOT NULL,
+    MaKhachThue INT NOT NULL,
+    NgayBatDau DATE NOT NULL,
+    NgayKetThuc DATE NOT NULL,
+    ThoiHanThue INT NOT NULL,
+    TienCoc DECIMAL(18,2),
+    TrangThai VARCHAR(50),
+    GhiChu VARCHAR(500),
+
+    CONSTRAINT FK_HOPDONG_TAISAN
+        FOREIGN KEY (MaTaiSan)
+        REFERENCES TAI_SAN(MaTaiSan),
+
+    CONSTRAINT FK_HOPDONG_KHACHTHUE
+        FOREIGN KEY (MaKhachThue)
+        REFERENCES KHACH_THUE(MaKhachThue)
+);
+
+-- =====================================
+-- BẢNG 7: CAU_HINH_GIA
+-- =====================================
+CREATE TABLE CAU_HINH_GIA
+(
+    MaCauHinh INTEGER PRIMARY KEY AUTOINCREMENT,
+    GiaDien DECIMAL(18,2) NOT NULL,
+    GiaDichVu DECIMAL(18,2) NOT NULL,
+    NgayApDung DATE NOT NULL,
+    TrangThai TINYINT(1) DEFAULT 1
+);
+
+-- =====================================
+-- BẢNG 8: CHI_SO_DIEN
+-- =====================================
+CREATE TABLE CHI_SO_DIEN
+(
+    MaChiSo INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaTaiSan INT NOT NULL,
+    Thang INT NOT NULL,
+    Nam INT NOT NULL,
+    ChiSoCu INT NOT NULL,
+    ChiSoMoi INT NOT NULL,
+    NgayNhap DATE NOT NULL,
+
+    CONSTRAINT FK_CHISODIEN_TAISAN
+        FOREIGN KEY (MaTaiSan)
+        REFERENCES TAI_SAN(MaTaiSan)
+);
+
+-- =====================================
+-- BẢNG 9: HOA_DON
+-- =====================================
+CREATE TABLE HOA_DON
+(
+    MaHoaDon INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaHopDong INT NOT NULL,
+    Thang INT NOT NULL,
+    Nam INT NOT NULL,
+    TienNha DECIMAL(18,2) DEFAULT 0.00,
+    SoDien INT DEFAULT 0,
+    GiaDien DECIMAL(18,2) DEFAULT 0.00,
+    TienDien DECIMAL(18,2) DEFAULT 0.00,
+    GiaDichVu DECIMAL(18,2) DEFAULT 0.00,
+    TienDichVu DECIMAL(18,2) DEFAULT 0.00,
+    TongTien DECIMAL(18,2) DEFAULT 0.00,
+    NgayTao DATE NOT NULL,
+    TrangThaiThanhToan VARCHAR(50),
+
+    CONSTRAINT FK_HOADON_HOPDONG
+        FOREIGN KEY (MaHopDong)
+        REFERENCES HOP_DONG(MaHopDong)
+);
+
+-- =====================================
+-- BẢNG 10: THONG_TIN_CHOT_KHACH
+-- =====================================
+CREATE TABLE THONG_TIN_CHOT_KHACH
+(
+    MaChotKhach INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaTaiSan INT NOT NULL,
+    MaTaiKhoanChot INT NOT NULL,
+    TenKhach VARCHAR(100) NOT NULL,
+    SoDienThoaiKhach VARCHAR(15) NOT NULL,
+    CCCD VARCHAR(20),
+    TienCoc DECIMAL(18,2),
+    NgayChot DATE NOT NULL,
+    NgayDuKienVaoO DATE,
+    SoDienDauVao INT DEFAULT 0,
+    TrangThai VARCHAR(50),
+    MaKhachThue INT NULL,
+    MaHopDong INT NULL,
+    GhiChu VARCHAR(500),
+
+    CONSTRAINT FK_CHOTKHACH_TAISAN
+        FOREIGN KEY (MaTaiSan)
+        REFERENCES TAI_SAN(MaTaiSan),
+
+    CONSTRAINT FK_CHOTKHACH_TAIKHOAN
+        FOREIGN KEY (MaTaiKhoanChot)
+        REFERENCES TAI_KHOAN(MaTaiKhoan),
+
+    CONSTRAINT FK_CHOTKHACH_KHACHTHUE
+        FOREIGN KEY (MaKhachThue)
+        REFERENCES KHACH_THUE(MaKhachThue),
+
+    CONSTRAINT FK_CHOTKHACH_HOPDONG
+        FOREIGN KEY (MaHopDong)
+        REFERENCES HOP_DONG(MaHopDong)
+);
+
+-- =====================================
+-- BẢNG 11: VAT_TU
+-- =====================================
+CREATE TABLE VAT_TU
+(
+    MaVatTu INTEGER PRIMARY KEY AUTOINCREMENT,
+    TenVatTu VARCHAR(100) NOT NULL,
+    DonViTinh VARCHAR(50),
+    SoLuongTon INT DEFAULT 0,
+    GhiChu VARCHAR(255)
+);
+
+-- =====================================
+-- BẢNG 12: LICH_SU_KHO
+-- =====================================
+CREATE TABLE LICH_SU_KHO
+(
+    MaLichSu INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaVatTu INT NOT NULL,
+    LoaiGiaoDich VARCHAR(20) NOT NULL,
+    SoLuong INT NOT NULL,
+    NgayGiaoDich DATE NOT NULL,
+    NoiDung VARCHAR(255),
+    MaTaiSan INT,
+
+    CONSTRAINT FK_LICHSUKHO_VATTU
+        FOREIGN KEY (MaVatTu)
+        REFERENCES VAT_TU(MaVatTu),
+
+    CONSTRAINT FK_LICHSUKHO_TAISAN
+        FOREIGN KEY (MaTaiSan)
+        REFERENCES TAI_SAN(MaTaiSan)
+);
+
+
+-- ==============================================================================
+-- KHU VỰC ĐỔ DỮ LIỆU MẪU THỰC TẾ (SEED DATA)
+-- ==============================================================================
+
+-- Nạp bảng: VAI_TRO
+INSERT INTO VAI_TRO (MaVaiTro, TenVaiTro) VALUES (1, 'Admin');
+INSERT INTO VAI_TRO (MaVaiTro, TenVaiTro) VALUES (2, 'Nhân viên quản lý');
+INSERT INTO VAI_TRO (MaVaiTro, TenVaiTro) VALUES (3, 'CTV/Sale');
+
+-- Nạp bảng: TAI_KHOAN
+INSERT INTO TAI_KHOAN (TenDangNhap, MatKhau, HoTen, SoDienThoai, MaVaiTro, TrangThai) VALUES
+('admin', '123456', 'Hương Giang', '0912345678', 1, 1),
+('loc01', '123456', 'A Lộc', '0988888881', 2, 1),
+('dat01', '123456', 'A Đạt', '0988888882', 2, 1),
+('toi01', '123456', 'A Tới', '0988888883', 2, 1),
+('hung01', '123456', 'A Hùng', '0988888884', 2, 1),
+('kien01', '123456', 'Kiên', '0988888885', 2, 1),
+('dang01', '123456', 'Đăng', '0988888886', 2, 1);
+
+-- Nạp bảng: LOAI_TAI_SAN
+INSERT INTO LOAI_TAI_SAN (MaLoaiTaiSan, TenLoaiTaiSan) VALUES (1, 'Phòng trọ');
+INSERT INTO LOAI_TAI_SAN (MaLoaiTaiSan, TenLoaiTaiSan) VALUES (2, 'Nhà nguyên căn');
+INSERT INTO LOAI_TAI_SAN (MaLoaiTaiSan, TenLoaiTaiSan) VALUES (3, 'Mặt bằng');
+
+-- Nạp bảng: TAI_SAN
+INSERT INTO TAI_SAN (MaLoaiTaiSan, MaSoTaiSan, KhuVuc, DiaChi, SoPhong, Tang, GiaThue, HoaHong, NgayTrong, DaTungChoThue, TrangThai, NhanVienChotCu, HanThanhToan, ThietBi, GhiChu, MoTa) VALUES
+(1, 'TS001', 'ĐÔNG THIÊN', '64 Đông Thiên', '201', 2, 2600.00, 500.00, '2026-05-29', 1, 'Trong', 2, 25, NULL, NULL, NULL),
+(1, 'TS002', 'ĐÔNG THIÊN', '64 Đông Thiên', '202', 2, 2000.00, 500.00, '2026-03-25', 1, 'Trong', 3, 5, 'vsc - đh', NULL, NULL),
+(1, 'TS003', 'ĐÔNG THIÊN', '108/38 Đông Thiên', '402', 4, 1800.00, 500.00, '2026-06-05', 1, 'Trong', 4, 15, NULL, NULL, NULL),
+(1, 'TS004', 'ĐÔNG THIÊN', '108/6a Đông Thiên', '301', 3, 2300.00, 500.00, '2026-06-15', 0, 'Trong', 7, 15, NULL, NULL, NULL),
+(1, 'TS005', 'VĨNH HƯNG', '259/69 Vĩnh Hưng', '401', 4, 2500.00, 500.00, '2026-04-09', 1, 'Trong', 3, 10, 'vskk - k đh', 'Lắp thêm đh - cọc 3tr', NULL),
+(1, 'TS006', 'VĨNH HƯNG', '165 Vĩnh Hưng', '301', 3, 2500.00, 500.00, '2026-05-11', 1, 'Trong', 5, 10, NULL, NULL, NULL),
+(1, 'TS007', 'VĨNH HƯNG', '165 Vĩnh Hưng', '402', 4, 1600.00, 500.00, '2026-05-07', 1, 'Trong', 4, 5, NULL, NULL, NULL),
+(1, 'TS008', 'VĨNH HƯNG', '346/71 Vĩnh Hưng', '201', 2, 2800.00, 500.00, '2026-06-01', 1, 'Trong', 3, 30, NULL, NULL, NULL),
+(1, 'TS009', 'LĨNH NAM', '255/50 Lĩnh Nam', '301', 3, 2500.00, 500.00, '2026-05-10', 1, 'DangThue', 2, 5, NULL, NULL, NULL),
+(1, 'TS010', 'TRẦN KHÁT CHÂN', '3 Trần Khát Chân', '102', 1, 2300.00, 1150.00, '2026-05-12', 1, 'DangThue', 3, 15, NULL, NULL, NULL),
+(1, 'TS011', 'VĨNH HƯNG', '259/69 Vĩnh Hưng', '101', 1, 1600.00, 500.00, '2026-05-14', 1, 'DangThue', 4, 5, NULL, NULL, NULL),
+(1, 'TS012', 'TÂN MAI', '120 Tân Mai', '201', 2, 2500.00, 500.00, '2026-05-16', 1, 'DangThue', 6, 15, NULL, NULL, NULL),
+(1, 'TS013', 'YÊN DUYÊN', '249 Yên Duyên', '402', 4, 2400.00, 500.00, '2026-05-16', 1, 'DangThue', 2, 20, NULL, NULL, NULL),
+(1, 'TS014', 'VĨNH HƯNG', '263 Vĩnh Hưng', '102', 1, 2000.00, 500.00, '2026-05-16', 1, 'DangThue', 7, 20, NULL, NULL, NULL);
+
+-- Nạp bảng: KHACH_THUE
+INSERT INTO KHACH_THUE (HoTen, SoDienThoai, CCCD, NgaySinh, DiaChiThuongTru, GhiChu) VALUES
+('Quyet Tien', '0362964416', '001096001234', '1998-05-20', 'Hà Nội', NULL),
+('Quang Huy', '0974770492', '001096005678', '1999-11-12', 'Hải Phòng', NULL),
+('Vu Khanh', '0789132475', '001096009012', '2000-02-15', 'Nam Định', NULL),
+('Trung Nguyen', '0862994508', '001096003456', '1995-07-08', 'Thanh Hóa', NULL),
+('Thai Son', '0866194161', '001096007890', '1997-03-24', 'Nghệ An', NULL),
+('Van Thanh', '0987096064', '001096001122', '1996-12-05', 'Quảng Ninh', NULL),
+('Ngoc Lam', '0342615227', '001096003344', '2001-08-19', 'Thái Bình', NULL),
+('Trung Vu', '0904292955', '001096005566', '1994-04-30', 'Hải Dương', NULL),
+('Dang Thi Thuy', '0328624602', '001096007788', '1993-10-14', 'Hưng Yên', NULL),
+('Bui Tai', '0363646816', '001096009900', '1999-01-01', 'Bắc Ninh', NULL);
+
+-- Nạp bảng: HOP_DONG
+INSERT INTO HOP_DONG (MaTaiSan, MaKhachThue, NgayBatDau, NgayKetThuc, ThoiHanThue, TienCoc, TrangThai, GhiChu) VALUES
+(9, 1, '2026-05-18', '2026-06-18', 1, 5250.00, 'Đang kích hoạt', NULL),
+(10, 2, '2026-05-18', '2026-06-15', 1, 4820.00, 'Đang kích hoạt', NULL),
+(11, 3, '2026-05-18', '2026-06-10', 1, 2956.00, 'Đang kích hoạt', NULL),
+(12, 4, '2026-05-17', '2026-06-15', 1, 5300.00, 'Đang kích hoạt', NULL),
+(13, 5, '2026-05-22', '2026-06-20', 1, 4873.00, 'Đang kích hoạt', NULL),
+(14, 6, '2026-05-21', '2026-06-20', 1, 4200.00, 'Đang kích hoạt', NULL),
+(1, 7, '2026-05-23', '2026-06-20', 1, 4025.00, 'Đang kích hoạt', NULL),
+(2, 8, '2026-05-27', '2026-06-05', 1, 3228.00, 'Đang kích hoạt', NULL),
+(3, 9, '2026-05-25', '2026-06-10', 1, 4450.00, 'Đang kích hoạt', NULL),
+(4, 10, '2026-05-23', '2026-06-15', 1, 3996.00, 'Đang kích hoạt', NULL);
+
+-- Nạp bảng: CAU_HINH_GIA
+INSERT INTO CAU_HINH_GIA (GiaDien, GiaDichVu, NgayApDung, TrangThai) VALUES (4000.00, 250000.00, '2026-01-01', 1);
+
+-- Nạp bảng: CHI_SO_DIEN
+INSERT INTO CHI_SO_DIEN (MaTaiSan, Thang, Nam, ChiSoCu, ChiSoMoi, NgayNhap) VALUES
+(11, 5, 2026, 1061, 1120, '2026-05-15'),
+(13, 5, 2026, 703, 850, '2026-05-17'),
+(14, 5, 2026, 2943, 3100, '2026-05-17'),
+(1, 5, 2026, 815, 930, '2026-05-19'),
+(3, 5, 2026, 4124, 4250, '2026-05-20'),
+(4, 5, 2026, 1191, 1300, '2026-05-22'),
+(9, 5, 2026, 100, 220, '2026-05-13'),
+(10, 5, 2026, 540, 680, '2026-05-13'),
+(12, 5, 2026, 2300, 2450, '2026-05-17'),
+(2, 5, 2026, 150, 210, '2026-05-21');
+
+-- Nạp bảng: HOA_DON
+INSERT INTO HOA_DON (MaHopDong, Thang, Nam, TienNha, SoDien, GiaDien, TienDien, GiaDichVu, TienDichVu, TongTien, NgayTao, TrangThaiThanhToan) VALUES
+(1, 5, 2026, 2500.00, 120, 4000.00, 480.00, 250000.00, 250.00, 5250.00, '2026-05-18', 'Đã thanh toán'),
+(2, 5, 2026, 2300.00, 140, 4000.00, 560.00, 250000.00, 250.00, 4820.00, '2026-05-18', 'Đã thanh toán'),
+(3, 5, 2026, 1600.00, 59, 4000.00, 236.00, 250000.00, 250.00, 2956.00, '2026-05-18', 'Đã thanh toán'),
+(4, 5, 2026, 2500.00, 0, 4000.00, 0.00, 250000.00, 250.00, 5300.00, '2026-05-17', 'Đã thanh toán'),
+(5, 5, 2026, 2400.00, 147, 4000.00, 588.00, 250000.00, 250.00, 4873.00, '2026-05-22', 'Đã thanh toán'),
+(6, 5, 2026, 2000.00, 157, 4000.00, 628.00, 250000.00, 250.00, 4200.00, '2026-05-21', 'Đã thanh toán'),
+(7, 5, 2026, 2000.00, 115, 4000.00, 460.00, 250000.00, 250.00, 4025.00, '2026-05-23', 'Đã thanh toán'),
+(8, 5, 2026, 2500.00, 60, 4000.00, 240.00, 250000.00, 250.00, 3228.00, '2026-05-27', 'Đã thanh toán'),
+(9, 5, 2026, 2800.00, 126, 4000.00, 504.00, 250000.00, 250.00, 4450.00, '2026-05-20', 'Đã thanh toán'),
+(10, 5, 2026, 2200.00, 109, 4000.00, 436.00, 250000.00, 250.00, 3996.00, '2026-05-23', 'Đã thanh toán');
+
+-- Nạp bảng: THONG_TIN_CHOT_KHACH
+INSERT INTO THONG_TIN_CHOT_KHACH (MaTaiSan, MaTaiKhoanChot, TenKhach, SoDienThoaiKhach, CCCD, TienCoc, NgayChot, NgayDuKienVaoO, SoDienDauVao, TrangThai, MaKhachThue, MaHopDong, GhiChu) VALUES
+(9, 2, 'Quyet Tien', '0362964416', '001096001234', 5300.00, '2026-05-13', '2026-05-18', 100, 'Đã chuyển thành hợp đồng', 1, 1, '1600 ck + 2050 ck + 1650 ck'),
+(10, 2, 'Quang Huy', '0974770492', '001096005678', 4820.00, '2026-05-13', '2026-05-18', 540, 'Đã chuyển thành hợp đồng', 2, 2, '2300 ck + 1000 ck + 1520 ck'),
+(11, 5, 'Vu Khanh', '0789132475', '001096009012', 2956.00, '2026-05-15', '2026-05-18', 1061, 'Đã chuyển thành hợp đồng', 3, 3, '2000 ck + 956 ck'),
+(12, 6, 'Trung Nguyen', '0862994508', '001096003456', 5300.00, '2026-05-17', '2026-05-17', 2300, 'Đã chuyển thành hợp đồng', 4, 4, '5300 ck'),
+(13, 2, 'Thai Son', '0866194161', '001096007890', 4873.00, '2026-05-17', '2026-05-22', 703, 'Đã chuyển thành hợp đồng', 5, 5, '4873 ck'),
+(14, 7, 'Van Thanh', '0987096064', '001096001122', 4200.00, '2026-05-16', '2026-05-21', 2943, 'Đã chuyển thành hợp đồng', 6, 6, '4200 ck'),
+(1, 2, 'Ngoc Lam', '0342615227', '001096003344', 4025.00, '2026-05-19', '2026-05-23', 815, 'Đã chuyển thành hợp đồng', 7, 7, '1525 ck + 2500 tm'),
+(2, 2, 'Trung Vu', '0904292955', '001096005566', 3228.00, '2026-05-21', '2026-05-27', 150, 'Đã chuyển thành hợp đồng', 8, 8, '3228 ck'),
+(3, 6, 'Dang Thi Thuy', '0328624602', '001096007788', 4450.00, '2026-05-20', '2026-05-25', 4124, 'Đã chuyển thành hợp đồng', 9, 9, '4450 ck'),
+(4, 2, 'Bui Tai', '0363646816', '001096009900', 3996.00, '2026-05-22', '2026-05-23', 1191, 'Đã chuyển thành hợp đồng', 10, 10, '3996 ck');
+
+-- Nạp bảng: VAT_TU
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Điều hòa', 'Cái', 15, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Bình nóng lạnh', 'Cái', 8, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Giường gỗ', 'Cái', 20, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Tủ quần áo', 'Cái', 12, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Công tơ điện', 'Cái', 30, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Vòi hoa sen', 'Cái', 50, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Bóng đèn LED', 'Cái', 100, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Ổ khóa cửa', 'Cái', 25, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Kệ bếp mini', 'Bộ', 10, NULL);
+INSERT INTO VAT_TU (TenVatTu, DonViTinh, SoLuongTon, GhiChu) VALUES ('Quạt trần', 'Cái', 14, NULL);
+
+-- Nạp bảng: LICH_SU_KHO
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (1, 'Nhập kho', 20, '2026-04-01', 'Nhập kho lô điều hòa mới', NULL);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (2, 'Nhập kho', 10, '2026-04-01', 'Nhập kho bình nóng lạnh', NULL);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (1, 'Xuất lắp đặt', 1, '2026-04-10', 'Lắp mới điều hòa lầu 2', 1);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (2, 'Xuất lắp đặt', 1, '2026-04-10', 'Lắp nóng lạnh lầu 2', 1);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (3, 'Nhập kho', 20, '2026-04-15', 'Nhập lô giường gỗ', NULL);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (4, 'Nhập kho', 15, '2026-04-15', 'Nhập tủ quần áo', NULL);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (3, 'Xuất lắp đặt', 1, '2026-04-20', 'Cấp giường lầu 1', 2);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (4, 'Xuất lắp đặt', 1, '2026-04-20', 'Cấp tủ lầu 1', 2);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (7, 'Xuất lắp đặt', 2, '2026-05-01', 'Thay bóng đèn cháy', 3);
+INSERT INTO LICH_SU_KHO (MaVatTu, LoaiGiaoDich, SoLuong, NgayGiaoDich, NoiDung, MaTaiSan) VALUES (8, 'Xuất lắp đặt', 1, '2026-05-02', 'Thay ổ khóa hỏng', 4);</sql><current_tab id="0"/></tab_sql></sqlb_project>

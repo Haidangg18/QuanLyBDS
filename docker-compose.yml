@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: ql_batdongsan_web
+    ports:
+      - "5000:5000"
+    volumes:
+      # Map thư mục db từ máy host vào thư mục /app/db của container
+      # Điều này đảm bảo dữ liệu SQLite không bị mất khi container khởi động lại
+      - ./db:/app/db
+    restart: unless-stopped

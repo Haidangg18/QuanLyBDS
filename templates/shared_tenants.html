@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách Khách Thuê - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-people-roof" style="color: var(--accent);"></i> Quản Lý Danh Sách Khách Thuê</h1>
+    <span style="font-size: 0.95rem; color: var(--text-secondary);">Tổng số khách thuê: {{ tenants|length }} người</span>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
+                    <th>Họ và Tên</th>
+                    <th>Số Điện Thoại</th>
+                    <th>Số CCCD</th>
+                    <th>Ngày Sinh</th>
+                    <th>Địa Chỉ Thường Trú</th>
+                    <th>Phòng Đang Thuê</th>
+                    <th>Địa Chỉ Phòng</th>
+                    <th>Ghi Chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if tenants %}
+                    {% for t in tenants %}
+                    <tr>
+                        <td><strong>{{ t.HoTen }}</strong></td>
+                        <td>{{ t.SoDienThoai }}</td>
+                        <td>{{ t.CCCD if t.CCCD else '-' }}</td>
+                        <td>{{ t.NgaySinh if t.NgaySinh else '-' }}</td>
+                        <td>{{ t.DiaChiThuongTru if t.DiaChiThuongTru else '-' }}</td>
+                        <td>
+                            {% if t.SoPhong %}
+                                {% if t.TrangThaiHD == 'Giữ phòng' %}
+                                    <span class="badge badge-datcoc">Giữ phòng {{ t.SoPhong }}</span>
+                                {% else %}
+                                    <span class="badge badge-dangthue">Phòng {{ t.SoPhong }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge badge-secondary">Đã rời đi</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.DiaChiRoom if t.DiaChiRoom else '-' }}</td>
+                        <td>
+                            {% if t.GhiChu %}
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ t.GhiChu }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy khách thuê nào.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

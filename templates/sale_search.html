@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Tra cứu phòng trống - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-magnifying-glass"></i> Danh sách Phòng Trống Hệ Thống</h1>
+    <a href="{{ url_for('sale_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+</div>
+
+<!-- Bộ lọc khu vực -->
+<div class="card" style="padding: 1.25rem;">
+    <div class="filter-row">
+        <label for="area-filter" class="form-label" style="margin-bottom: 0;"><i class="fa-solid fa-filter"></i> Lọc theo khu vực:</label>
+        <select id="area-filter" class="filter-select" onchange="filterArea()">
+            <option value="ALL">-- Tất cả khu vực --</option>
+            {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Bảng danh sách phòng trống -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table" id="rooms-table">
+            <thead>
+                <tr>
+                    <th>Khu Vực</th>
+                    <th>Địa Chỉ</th>
+                    <th>Số Phòng</th>
+                    <th>Tầng</th>
+                    <th>Giá Thuê (VND)</th>
+                    <th>Hoa Hồng (VND)</th>
+                    <th>Thiết Bị</th>
+                    <th>Ghi Chú</th>
+                    <th style="text-align: center;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rooms %}
+                    {% for room in rooms %}
+                    <tr class="room-row" data-area="{{ room.KhuVuc }}">
+                        <td><strong>{{ room.KhuVuc }}</strong></td>
+                        <td>{{ room.DiaChi }}</td>
+                        <td><span class="badge badge-trong">Phòng {{ room.SoPhong }}</span></td>
+                        <td>Tầng {{ room.Tang }}</td>
+                        <td style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }}</td>
+                        <td style="color: var(--success); font-weight: 600;">{{ "{:,.2f}".format(room.HoaHong) }}</td>
+                        <td>
+                            {% if room.ThietBi %}
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fa-solid fa-cubes"></i> {{ room.ThietBi }}</span>
+                            {% else %}
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Không có thiết bị</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.GhiChu %}
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ room.GhiChu }}</span>
+                            {% else %}
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{{ url_for('sale_chot_coc', room_id=room.MaTaiSan) }}" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-check"></i> Chốt cọc khách
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-secondary);">Hiện không có phòng trống nào trong hệ thống.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterArea() {
+    const filterValue = document.getElementById('area-filter').value;
+    const rows = document.getElementsByClassName('room-row');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowArea = row.getAttribute('data-area');
+        
+        if (filterValue === 'ALL' || rowArea === filterValue) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

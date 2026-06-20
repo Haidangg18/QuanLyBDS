@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử hóa đơn phòng {{ room.SoPhong }} - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-file-invoice-dollar" style="color: var(--accent);"></i> HÓA ĐƠN PHÒNG {{ room.SoPhong }}</h1>
+        <span style="font-size: 0.95rem; color: var(--text-secondary);">
+            Địa chỉ: <strong>{{ room.DiaChi }} ({{ room.KhuVuc }})</strong> 
+            {% if contract %}
+                | Khách thuê: <strong>{{ contract.TenKhach }} ({{ contract.SoDienThoai }})</strong>
+            {% endif %}
+        </span>
+    </div>
+    <a href="{{ url_for('manager_thanhtoan') }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Quay lại Thanh toán</a>
+</div>
+
+{% if contract %}
+<div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(99,102,241,0.03) 0%, rgba(6,182,212,0.03) 100%); border: 1px solid rgba(99,102,241,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="margin: 0 0 0.5rem 0; color: var(--text-primary);"><i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> Thông tin hợp đồng đang kích hoạt</h3>
+            <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                Thời hạn: <strong>{{ contract.NgayBatDau }}</strong> đến <strong>{{ contract.NgayKetThuc }}</strong> ({{ contract.ThoiHanThue }} tháng) | Tiền cọc: <strong>{{ "{:,.2f}".format(contract.TienCoc) }} VND</strong>
+            </p>
+        </div>
+        <span class="badge badge-trong" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;"><i class="fa-solid fa-circle-check"></i> Đang hiệu lực</span>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.25rem; color: var(--text-primary);"><i class="fa-solid fa-list-ol"></i> Danh sách hóa đơn phát sinh</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr style="background-color: #f8fafc;">
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Kỳ Hóa Đơn</th>
+                    <th>Tiền Nhà (VND)</th>
+                    <th>Chỉ số điện</th>
+                    <th>Tiền Điện (VND)</th>
+                    <th>Tiền Dịch Vụ (VND)</th>
+                    <th>Tổng Cộng (VND)</th>
+                    <th>Ngày Tạo</th>
+                    <th>Trạng Thái</th>
+                    <th style="text-align: center; width: 180px;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if invoices %}
+                    {% for inv in invoices %}
+                    <tr>
+                        <td style="text-align: center;">{{ loop.index }}</td>
+                        <td><strong>Tháng {{ inv.Thang }}/{{ inv.Nam }}</strong></td>
+                        <td style="font-weight: 600;">{{ "{:,.2f}".format(inv.TienNha) }}</td>
+                        <td style="font-size: 0.9rem; color: var(--text-secondary);">
+                            {% if inv.SoDien > 0 %}
+                                {{ inv.SoDien }} kWh (đơn giá: {{ "{:,.0f}".format(inv.GiaDien) }}đ)
+                            {% else %}
+                                0 kWh (Hóa đơn đầu tiên)
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 600;">{{ "{:,.2f}".format(inv.TienDien) }}</td>
+                        <td>{{ "{:,.2f}".format(inv.TienDichVu) }}</td>
+                        <td style="font-weight: 700; color: var(--accent);">{{ "{:,.2f}".format(inv.TongTien) }}</td>
+                        <td style="font-size: 0.85rem; color: var(--text-secondary);">{{ inv.NgayTao }}</td>
+                        <td>
+                            {% if inv.TrangThaiThanhToan == 'Đã thanh toán' %}
+                                <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đã thanh toán</span>
+                            {% else %}
+                                <span class="badge badge-chuathanhtoan"><i class="fa-solid fa-circle-exclamation"></i> Chưa thanh toán</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 0.25rem; justify-content: center; flex-wrap: wrap;">
+                                <a href="{{ url_for('shared_invoice_view', invoice_id=inv.MaHoaDon) }}" class="btn btn-primary btn-sm" style="flex: 1;" title="Xem chi tiết HĐ">
+                                    <i class="fa-solid fa-eye"></i> Chi tiết
+                                </a>
+                                {% if session.get('role_id') in [1, 2] and inv.TrangThaiThanhToan == 'Chưa thanh toán' %}
+                                <a href="{{ url_for('manager_invoice_edit', invoice_id=inv.MaHoaDon) }}" class="btn btn-warning btn-sm" style="flex: 1;" title="Sửa thông tin hóa đơn">
+                                    <i class="fa-solid fa-pen"></i> Sửa
+                                </a>
+                                {% endif %}
+                                {% if session.get('role_id') == 1 %}
+                                    {% if inv.TrangThaiThanhToan == 'Chưa thanh toán' %}
+                                    <form action="{{ url_for('admin_invoice_pay', invoice_id=inv.MaHoaDon) }}" method="POST" onsubmit="return confirm('Xác nhận đã nhận đủ số tiền {{ '{:,.2f}'.format(inv.TongTien) }} VND của hóa đơn này?');" style="flex: 1;">
+                                        <button type="submit" class="btn btn-success btn-sm" style="width: 100%;" title="Xác nhận thanh toán">
+                                            <i class="fa-solid fa-check-double"></i> Duyệt
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                        <div style="font-size: 0.85rem; color: var(--text-muted); flex: 1; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lock"></i> Đã duyệt</div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Chưa có hóa đơn nào được tạo cho hợp đồng này.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+    <i class="fa-solid fa-circle-info" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+    <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">Phòng này đang trống hoặc chưa có hợp đồng thuê được kích hoạt.</p>
+    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">Không thể truy vấn hóa đơn thanh toán khi phòng không có khách thuê thực tế.</p>
+</div>
+{% endif %}
+{% endblock %}

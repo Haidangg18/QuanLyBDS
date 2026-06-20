@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa phiếu chốt cọc - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-pen"></i> Chỉnh Sửa Phiếu Chốt Phòng Giữ Chỗ</h1>
+    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại bảng theo dõi</a>
+</div>
+
+<div class="card" style="max-width: 700px; margin: 0 auto;">
+    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-pen-to-square"></i> Cập nhật chi tiết phiếu chốt khách</h3>
+    <form action="{{ url_for('shared_booking_edit', deal_id=deal.MaChotKhach) }}" method="POST">
+        <div class="form-group">
+            <label for="ten_khach" class="form-label">Tên khách hàng *</label>
+            <input type="text" id="ten_khach" name="ten_khach" class="form-control" value="{{ deal.TenKhach }}" required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="sdt_khach" class="form-label">Số điện thoại *</label>
+                <input type="tel" id="sdt_khach" name="sdt_khach" class="form-control" value="{{ deal.SoDienThoaiKhach }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="cccd" class="form-label">CCCD khách hàng</label>
+                <input type="text" id="cccd" name="cccd" class="form-control" value="{{ deal.CCCD if deal.CCCD else '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="ngay_chot" class="form-label">Ngày chốt cọc *</label>
+                <input type="date" id="ngay_chot" name="ngay_chot" class="form-control" value="{{ deal.NgayChot }}" required>
+            </div>
+            <div class="form-col form-group">
+                <label for="ngay_vao" class="form-label">Ngày dự kiến vào ở *</label>
+                <input type="date" id="ngay_vao" name="ngay_vao" class="form-control" value="{{ deal.NgayDuKienVaoO }}" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="gia_thue" class="form-label">Giá thuê chốt (VND) *</label>
+                <input type="number" step="0.01" id="gia_thue" name="gia_thue" class="form-control" value="{{ deal.GiaThue }}" readonly style="background-color: #f1f5f9; cursor: not-allowed;" title="Giá thuê đã chốt lần 1 không thể thay đổi">
+            </div>
+            <div class="form-col form-group">
+                <label for="tien_coc" class="form-label">Số tiền cọc đã nhận (VND) *</label>
+                <input type="number" step="0.01" id="tien_coc" name="tien_coc" class="form-control" value="{{ deal.TienCoc }}" required>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="dien_dau_vao" class="form-label">Số điện đầu vào (kWh) *</label>
+                <input type="number" id="dien_dau_vao" name="dien_dau_vao" class="form-control" value="{{ deal.SoDienDauVao }}" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="trang_thai" class="form-label">Trạng thái phiếu chốt *</label>
+            <select id="trang_thai" name="trang_thai" class="form-control" required>
+                <option value="Da Duyet" {% if deal.TrangThai == 'Da Duyet' %}selected{% endif %}>Đang cọc giữ chỗ (Da Duyet)</option>
+                <option value="Da Chuyen Thanh Hop Dong" {% if deal.TrangThai == 'Da Chuyen Thanh Hop Dong' %}selected{% endif %}>Đã kích hoạt hợp đồng (Da Chuyen Thanh Hop Dong)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="ghi_chu" class="form-label">Ghi chú cọc (breakdown L1, L2, L3...)</label>
+            <textarea id="ghi_chu" name="ghi_chu" rows="3" class="form-control" placeholder="Ví dụ: 1600 ck + 2050 ck + 1650 ck...">{{ deal.GhiChu if deal.GhiChu else '' }}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+            </button>
+            <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary" style="flex: 1; text-align: center;">
+                Hủy bỏ
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

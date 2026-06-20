@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Chốt phòng giữ chỗ - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-signature"></i> Phiếu Chốt Phòng Giữ Chỗ</h1>
+    <a href="{{ url_for('sale_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại danh sách</a>
+</div>
+
+<div class="layout-split">
+    <!-- Cột trái: Form nhập liệu -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;"><i class="fa-regular fa-pen-to-square"></i> Nhập thông tin khách hàng</h3>
+        <form action="{{ url_for('sale_chot_coc', room_id=room.MaTaiSan) }}" method="POST">
+            <div class="form-group">
+                <label for="tenant_name" class="form-label">Tên khách hàng *</label>
+                <input type="text" id="tenant_name" name="tenant_name" class="form-control" placeholder="Ví dụ: Nguyễn Văn A..." required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="tenant_phone" class="form-label">Số điện thoại khách *</label>
+                    <input type="tel" id="tenant_phone" name="tenant_phone" class="form-control" placeholder="Ví dụ: 0987654321..." required>
+                </div>
+                <div class="form-col form-group">
+                    <label for="tenant_cccd" class="form-label">Số CCCD khách hàng</label>
+                    <input type="text" id="tenant_cccd" name="tenant_cccd" class="form-control" placeholder="Nhập 12 số căn cước...">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="gia_thue" class="form-label">Giá thuê chốt (VND) *</label>
+                    <input type="number" step="100" id="gia_thue" name="gia_thue" class="form-control" value="{{ room.GiaThue }}" required>
+                </div>
+                <div class="form-col form-group">
+                    <label for="deposit_amount" class="form-label">Số tiền khách đặt cọc (VND) *</label>
+                    <input type="number" step="0.01" id="deposit_amount" name="deposit_amount" class="form-control" placeholder="Ví dụ: 2000.00..." required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="move_in_date" class="form-label">Ngày dự kiến dọn vào ở *</label>
+                    <input type="date" id="move_in_date" name="move_in_date" class="form-control" required>
+                </div>
+
+                <div class="form-col form-group">
+                    <label for="duration" class="form-label">Thời hạn thuê (Tháng) *</label>
+                    <select id="duration" name="duration" class="form-control" required>
+                        <option value="1">1 tháng</option>
+                        <option value="3">3 tháng</option>
+                        <option value="6" selected>6 tháng</option>
+                        <option value="12">12 tháng</option>
+                        <option value="18">18 tháng</option>
+                        <option value="24">24 tháng</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="elec_start" class="form-label">Số điện đầu vào (Chỉ số công tơ hiện tại) *</label>
+                <input type="number" id="elec_start" name="elec_start" class="form-control" placeholder="Ví dụ: 1250..." required>
+                <small style="color: var(--text-muted); font-size: 0.8rem;">Chỉ số hiển thị trên mặt công tơ điện của phòng tại thời điểm bàn giao giữ chỗ.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="notes" class="form-label">Ghi chú đóng tiền cọc (Thông tin thanh toán rải rác)</label>
+                <textarea id="notes" name="notes" rows="4" class="form-control" placeholder="Ghi nhận lịch trình đóng cọc, ví dụ: 'Khách chuyển khoản trước 1tr đợt 1 ngày 12/06. Đợt 2 đóng nốt 1.5tr khi nhận phòng ngày 18/06'"></textarea>
+            </div>
+
+            <!-- Bộ máy tính tổng tiền đợt 1 -->
+            <div id="calculator-box" class="card" style="display: none; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); margin-top: 1rem; margin-bottom: 1.5rem; padding: 1.25rem;">
+                <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem;"><i class="fa-solid fa-calculator"></i> Bảng tính dự kiến tiền đợt 1 (Đóng khi nhận phòng)</h4>
+                <div style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>Số ngày ở lẻ (đến ca thu mùng {{ room.HanThanhToan }}):</span>
+                        <strong id="calc-days" style="color: var(--text-primary);">0</strong> ngày
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>1. Tiền cọc giữ phòng (1 tháng tiền phòng):</span>
+                        <strong id="calc-deposit" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>2. Tiền nhà lẻ ngày:</span>
+                        <strong id="calc-rent-le" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>3. Tiền dịch vụ lẻ ngày (cố định):</span>
+                        <strong id="calc-dv-le" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid rgba(99, 102, 241, 0.2); margin: 0.5rem 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                        <span>TỔNG CẦN ĐÓNG ĐỢT 1:</span>
+                        <strong id="calc-total" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                        <span>ĐÃ CỌC TRƯỚC (Nhập ở ô trên):</span>
+                        <strong id="calc-paid" style="color: var(--success);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: 700; border-top: 1px dashed rgba(99, 102, 241, 0.3); padding-top: 0.5rem; margin-top: 0.5rem;">
+                        <span style="color: var(--text-primary);">CÒN LẠI PHẢI ĐÓNG KHI NHẬN PHÒNG:</span>
+                        <span id="calc-remaining" style="color: var(--warning-text);">0 đ</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-paper-plane"></i> Gửi thông tin chốt phòng
+            </button>
+        </form>
+    </div>
+
+    <!-- Cột phải: Thông tin phòng đang chốt -->
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-house-circle-check"></i> Thông tin phòng</h3>
+            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Mã số tài sản:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ room.MaSoTaiSan }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Khu vực:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600;">{{ room.KhuVuc }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-size: 0.9rem;">{{ room.DiaChi }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số phòng / Tầng:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;"><span class="badge badge-trong">Phòng {{ room.SoPhong }}</span> (Tầng {{ room.Tang }})</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá thuê gốc:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND/tháng</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hoa hồng của bạn:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--success);">{{ "{:,.2f}".format(room.HoaHong) }} VND</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn chốt ca thu:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="card" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15);">
+            <h4 style="color: #fca5a5; margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Lưu ý khóa phòng</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+                Sau khi gửi thông tin, trạng thái phòng sẽ lập tức chuyển sang <strong>Giữ phòng</strong> để khóa phòng. Các Sale khác sẽ không thể chốt phòng này nữa. Đồng thời, hợp đồng giữ phòng và hóa đơn đầu tiên cũng sẽ được tạo tự động trên hệ thống.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function getGiaPhong() {
+        return parseFloat(document.getElementById('gia_thue').value) || parseFloat("{{ room.GiaThue }}") || 0;
+    }
+    
+    const giaDichVu = parseFloat("{{ gia_dv }}") || 250;
+    const hanThanhToan = parseInt("{{ room.HanThanhToan }}") || 15;
+
+    function calculateFirstPayment() {
+        const giaPhong = getGiaPhong();
+        const moveInDateVal = document.getElementById('move_in_date').value;
+        const depositAmountVal = parseFloat(document.getElementById('deposit_amount').value) || 0;
+        if (!moveInDateVal) {
+            document.getElementById('calculator-box').style.display = 'none';
+            return;
+        }
+        
+        const startDt = new Date(moveInDateVal);
+        const startDay = startDt.getDate();
+        const startMonth = startDt.getMonth(); // 0-indexed
+        const startYear = startDt.getFullYear();
+        
+        // Calculate next ca thu date
+        let nextCaThuYear = startYear;
+        let nextCaThuMonth = startMonth;
+        
+        if (startDay < hanThanhToan) {
+            // Trong cùng tháng
+        } else {
+            // Sang tháng sau
+            nextCaThuMonth += 1;
+            if (nextCaThuMonth > 11) {
+                nextCaThuMonth = 0;
+                nextCaThuYear += 1;
+            }
+        }
+        
+        const nextCaThuDate = new Date(nextCaThuYear, nextCaThuMonth, hanThanhToan);
+        
+        // Calculate days difference (safely)
+        const d1 = new Date(startDt.getFullYear(), startDt.getMonth(), startDt.getDate());
+        const d2 = new Date(nextCaThuDate.getFullYear(), nextCaThuDate.getMonth(), nextCaThuDate.getDate());
+        let actualDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        
+        if (actualDays < 0) {
+            document.getElementById('calculator-box').style.display = 'none';
+            return;
+        }
+        if (actualDays > 30) {
+            actualDays = 30;
+        }
+        
+        // Calculate pro-rated rent and service fee
+        const tienNhaLe = (giaPhong / 30.0) * actualDays;
+        const tienDvLe = (giaDichVu / 30.0) * actualDays;
+        const totalFirstPayment = giaPhong + tienNhaLe + tienDvLe;
+        
+        const remainingPayment = Math.max(0, totalFirstPayment - depositAmountVal);
+        
+        // Display breakdown
+        document.getElementById('calc-days').textContent = actualDays;
+        document.getElementById('calc-deposit').textContent = (giaPhong * 1000).toLocaleString('vi-VN') + ' đ';
+        document.getElementById('calc-rent-le').textContent = (tienNhaLe * 1000).toLocaleString('vi-VN', {maximumFractionDigits: 0}) + ' đ';
+        document.getElementById('calc-dv-le').textContent = (tienDvLe * 1000).toLocaleString('vi-VN', {maximumFractionDigits: 0}) + ' đ';
+        document.getElementById('calc-total').textContent = (totalFirstPayment * 1000).toLocaleString('vi-VN', {maximumFractionDigits: 0}) + ' đ';
+        document.getElementById('calc-paid').textContent = (depositAmountVal * 1000).toLocaleString('vi-VN', {maximumFractionDigits: 0}) + ' đ';
+        document.getElementById('calc-remaining').textContent = (remainingPayment * 1000).toLocaleString('vi-VN', {maximumFractionDigits: 0}) + ' đ';
+        
+        document.getElementById('calculator-box').style.display = 'block';
+    }
+
+    // Attach event listeners
+    document.getElementById('move_in_date').addEventListener('change', calculateFirstPayment);
+    document.getElementById('deposit_amount').addEventListener('input', calculateFirstPayment);
+    document.getElementById('gia_thue').addEventListener('input', calculateFirstPayment);
+    // Initial run
+    calculateFirstPayment();
+</script>
+{% endblock %}

@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Theo Dõi Chung - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> BẢNG THEO DÕI HỆ THỐNG</h1>
+    <span style="font-size: 0.95rem; color: var(--text-secondary);">Cập nhật ngày {{ current_date }}</span>
+</div>
+
+<!-- Hệ thống Tab điều hướng -->
+<div class="card" style="padding: 0.5rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 0.5rem;">
+        <button class="btn tab-btn active" id="tab-rooms-btn" onclick="switchTab('rooms')">
+            <i class="fa-solid fa-house-chimney-user"></i> Danh Sách Phòng Trống
+        </button>
+        <button class="btn tab-btn" id="tab-bookings-btn" onclick="switchTab('bookings')">
+            <i class="fa-solid fa-handshake"></i> Tổng Hợp Phòng Chốt
+        </button>
+    </div>
+</div>
+
+<!-- Tab 1: Danh sách phòng trống -->
+<div class="tab-content" id="tab-rooms">
+    <!-- Bộ lọc khu vực -->
+    <div class="card" style="padding: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0;">
+            <div class="filter-row" style="margin-bottom: 0;">
+                <label for="area-filter" class="form-label" style="margin-bottom: 0; font-weight: 600;"><i class="fa-solid fa-filter"></i> Lọc Khu Vực:</label>
+                <select id="area-filter" class="filter-select" onchange="filterRooms()">
+                    <option value="ALL">-- Tất cả khu vực --</option>
+                    {% for area in areas %}
+                    <option value="{{ area }}">{{ area }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-row" style="margin-bottom: 0;">
+                <label for="type-filter" class="form-label" style="margin-bottom: 0; font-weight: 600;"><i class="fa-solid fa-building"></i> Loại hình:</label>
+                <select id="type-filter" class="filter-select" onchange="filterRooms()">
+                    <option value="ALL">-- Tất cả --</option>
+                    <option value="1">Phòng trọ</option>
+                    <option value="2">Nhà nguyên căn</option>
+                    <option value="3">Mặt bằng</option>
+                </select>
+            </div>
+            {% if session.get('role_id') in [1, 2] %}
+                <a href="{{ url_for('shared_room_add') }}" class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-plus"></i> Thêm tài sản mới
+                </a>
+            {% endif %}
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">
+            Tổng số phòng trống: <span class="badge badge-trong" style="font-size: 0.9rem;">{{ rooms|length }} phòng</span>
+        </div>
+    </div>
+
+    <!-- Bảng phòng trống -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
+                        <th>Khu Vực</th>
+                        <th style="width: 50px; text-align: center;">STT</th>
+                        <th>Địa Chỉ</th>
+                        <th>Phòng</th>
+                        <th>Giá Phòng (VND)</th>
+                        <th>Ghi Chú</th>
+                        <th>Thiết Bị</th>
+                        <th>NV Chốt Cũ</th>
+                        <th>Ngày Trống</th>
+                        <th>Hoa Hồng</th>
+                        {% if session.get('role_id') in [1, 2] %}
+                            <th style="text-align: center;">Hành Động</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody id="rooms-tbody">
+                    {% if rooms %}
+                        {% for r in rooms %}
+                        <tr class="room-row" data-area="{{ r.KhuVuc }}" data-type="{{ r.MaLoaiTaiSan }}">
+                            <td><strong>{{ r.KhuVuc }}</strong></td>
+                            <td style="text-align: center;">{{ loop.index }}</td>
+                            <td>{{ r.DiaChi }}</td>
+                            <td><span class="badge badge-trong" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
+                            <td style="font-weight: 700;">{{ "{:,.2f}".format(r.GiaThue) }}</td>
+                            <td>{{ r.GhiChu if r.GhiChu else '-' }}</td>
+                            <td>
+                                {% if r.ThietBi %}
+                                    <span style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fa-solid fa-cubes"></i> {{ r.ThietBi }}</span>
+                                {% else %}
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Không có thiết bị</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ r.TenNhanVienChotCu if r.TenNhanVienChotCu else '-' }}</strong></td>
+                            <td>{{ r.NgayTrong if r.NgayTrong else '-' }}</td>
+                            <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(r.HoaHong) }}</td>
+                            {% if session.get('role_id') in [1, 2] %}
+                                <td style="text-align: center;">
+                                    <div style="display: flex; gap: 0.25rem; justify-content: center;">
+                                        <a href="{{ url_for('shared_room_edit', room_id=r.MaTaiSan) }}" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem;">
+                                            <i class="fa-solid fa-pen-to-square"></i> Sửa
+                                        </a>
+                                        <form action="{{ url_for('shared_room_delete', room_id=r.MaTaiSan) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phòng này? Hành động này không thể hoàn tác!');" style="display: inline-block;">
+                                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.35rem 0.65rem;" title="Xóa phòng">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy phòng trống nào.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 2: Tổng hợp phòng chốt -->
+<div class="tab-content" id="tab-bookings" style="display: none;">
+    <!-- Bảng phòng chốt -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+            <h3 style="color: var(--accent); margin: 0;"><i class="fa-solid fa-handshake"></i> Tổng hợp phòng chốt trong tháng</h3>
+            <span class="badge badge-datcoc" style="font-size: 0.9rem;">Tổng số lượt chốt: {{ bookings|length }} lượt</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
+                        <th>STT</th>
+                        <th>Số Phòng</th>
+                        {% if session.get('role_id') in [1, 2] %}
+                            <th style="text-align: center; width: 160px;">Hành Động</th>
+                        {% endif %}
+                        <th>Ngày Chốt</th>
+                        <th>Địa Chỉ</th>
+                        <th>Giá Phòng</th>
+                        <th>Tiền Cọc Trước</th>
+                        <th>Ghi Chú Cọc</th>
+                        <th>Tên Khách Hàng</th>
+                        <th>SĐT</th>
+                        <th>NV Chốt</th>
+                        <th>Hợp Đồng</th>
+                        <th>Hoa Hồng</th>
+                        <th>Điện Vào</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if bookings %}
+                        {% for b in bookings %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <span class="badge {% if b.TrangThaiHopDong == 'Đang kích hoạt' %}badge-dangthue{% elif b.TrangThaiHopDong == 'Giữ phòng' %}badge-datcoc{% else %}badge-secondary{% endif %}">
+                                    Phòng {{ b.SoPhong }}
+                                </span>
+                            </td>
+                            {% if session.get('role_id') in [1, 2] %}
+                                <td style="text-align: center;">
+                                    <div style="display: flex; gap: 0.25rem; justify-content: center;">
+                                        <a href="{{ url_for('shared_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem;">
+                                            <i class="fa-solid fa-user-gear"></i> Sửa
+                                        </a>
+                                    </div>
+                                </td>
+                            {% endif %}
+                            <td>{{ b.NgayChot }}</td>
+                            <td>{{ b.DiaChi }}</td>
+                            <td style="font-weight: 700;">{{ "{:,.2f}".format(b.GiaThue) }}</td>
+                            <td style="font-weight: 700; color: var(--warning);">{{ "{:,.2f}".format(b.TienCoc) }}</td>
+                            <td style="font-size: 0.8rem; color: var(--text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ b.GhiChu }}">
+                                {{ b.GhiChu if b.GhiChu else '-' }}
+                            </td>
+                            <td><strong>{{ b.TenKhach }}</strong></td>
+                            <td>{{ b.SoDienThoaiKhach }}</td>
+                            <td><strong>{{ b.TenNhanVienChot }}</strong></td>
+                            <td style="text-align: center;">
+                                {% if b.HopDongKichHoat or b.TrangThai == 'Da Chuyen Thanh Hop Dong' %}
+                                    <span class="badge badge-trong"><i class="fa-solid fa-file-circle-check"></i> Đã có HĐ</span>
+                                {% else %}
+                                    <span class="badge badge-chuathanhtoan"><i class="fa-solid fa-file-circle-xmark"></i> Đang cọc</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(b.HoaHongTaiSan) }}</td>
+                            <td>{{ b.SoDienDauVao }} kWh</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="15" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không có thông tin phòng chốt nào.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tabId) {
+    // Ẩn tất cả các tab
+    document.getElementById('tab-rooms').style.display = 'none';
+    document.getElementById('tab-bookings').style.display = 'none';
+    
+    // Loại bỏ class active khỏi các nút
+    document.getElementById('tab-rooms-btn').classList.remove('active');
+    document.getElementById('tab-bookings-btn').classList.remove('active');
+    
+    // Hiển thị tab được chọn
+    document.getElementById('tab-' + tabId).style.display = 'block';
+    document.getElementById('tab-' + tabId + '-btn').classList.add('active');
+}
+
+function filterRooms() {
+    const area = document.getElementById('area-filter').value;
+    const type = document.getElementById('type-filter').value;
+    const rows = document.getElementsByClassName('room-row');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowArea = row.getAttribute('data-area');
+        const rowType = row.getAttribute('data-type');
+        
+        const matchesArea = (area === 'ALL' || rowArea === area);
+        const matchesType = (type === 'ALL' || rowType === type);
+        
+        if (matchesArea && matchesType) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

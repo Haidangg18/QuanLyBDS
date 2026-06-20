@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Chi tiết Ca Thu Mùng {{ day }} - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-list-check"></i> DANH SÁCH PHÒNG CHỐT CA MÙNG {{ day }}</h1>
+    <a href="{{ url_for('manager_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Ca Thu</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">STT</th>
+                    <th>Địa chỉ nhà</th>
+                    <th>Số phòng</th>
+                    <th>Giá phòng gốc</th>
+                    <th>Tiền cọc trước</th>
+                    <th>Tên khách hàng</th>
+                    <th>Số điện thoại</th>
+                    <th>Số điện đầu vào</th>
+                    <th>Trạng thái phòng</th>
+                    <th style="text-align: center; width: 220px;">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rooms %}
+                    {% for room in rooms %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ room.DiaChi }} ({{ room.KhuVuc }})</td>
+                        <td><span class="badge {% if room.TrangThai == 'Trong' %}badge-trong{% elif room.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}">Phòng {{ room.SoPhong }}</span></td>
+                        <td style="font-weight: 600; color: #fff;">{{ "{:,.2f}".format(room.GiaThue) }}</td>
+                        <td>
+                            {% if room.TienCocChot %}
+                                {{ "{:,.2f}".format(room.TienCocChot) }}
+                            {% else %}
+                                <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.TenKhachChot %}
+                                <strong>{{ room.TenKhachChot }}</strong>
+                            {% else %}
+                                <span style="color: var(--text-muted);">Trống</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.SdtKhachChot %}
+                                {{ room.SdtKhachChot }}
+                            {% else %}
+                                <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.DienDauVaoChot is not none %}
+                                {{ room.DienDauVaoChot }}
+                            {% else %}
+                                <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.TrangThai == 'Trong' %}
+                                <span class="badge badge-trong">Trống</span>
+                            {% elif room.TrangThai == 'Giữ phòng' %}
+                                <span class="badge badge-datcoc">Giữ phòng</span>
+                            {% elif room.TrangThai == 'DangThue' %}
+                                <span class="badge badge-dangthue">Đang thuê</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ room.TrangThai }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            {% if room.TrangThai == 'Giữ phòng' %}
+                                <a href="{{ url_for('shared_invoices', room_id=room.MaTaiSan) }}" class="btn btn-info btn-sm" style="width: 100%;">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i> Xem hóa đơn cọc/nhà
+                                </a>
+                            {% elif room.TrangThai == 'DangThue' %}
+                                {% if session.get('role_id') == 1 %}
+                                    <a href="{{ url_for('shared_invoices', room_id=room.MaTaiSan) }}" class="btn btn-success btn-sm" style="width: 100%;">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i> Xem & duyệt hóa đơn
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('manager_dien_nuoc_form', room_id=room.MaTaiSan) }}" class="btn btn-info btn-sm">
+                                        <i class="fa-solid fa-calculator"></i> Chốt điện nước định kỳ
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">Không cần xử lý</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy phòng nào được cấu hình thanh toán vào ngày này.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

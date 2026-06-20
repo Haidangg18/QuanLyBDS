@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Kho Vật Tư - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-warehouse"></i> Quản Lý Kho & Vật Tư Thiết Bị</h1>
+    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+</div>
+
+<div class="layout-split">
+    <!-- Cột trái: Danh sách vật tư hiện có trong kho -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-boxes-stacked"></i> Danh mục vật tư tồn kho</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tên vật tư</th>
+                        <th>Đơn vị tính</th>
+                        <th style="text-align: right;">Số lượng tồn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if items %}
+                        {% for item in items %}
+                        <tr>
+                            <td><strong>{{ item.TenVatTu }}</strong></td>
+                            <td>{{ item.DonViTinh }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--text-primary);">
+                                {% if item.SoLuongTon <= 5 %}
+                                    <span style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> {{ item.SoLuongTon }}</span>
+                                {% else %}
+                                    {{ item.SoLuongTon }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-secondary);">Không có dữ liệu vật tư.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cột phải: Form tạo phiếu giao dịch kho -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-file-invoice"></i> Tạo phiếu giao dịch kho</h3>
+        <form action="{{ url_for('manager_kho') }}" method="POST">
+            <div class="form-group">
+                <label for="vat_tu_id" class="form-label">Chọn vật tư *</label>
+                <select id="vat_tu_id" name="vat_tu_id" class="form-control" required>
+                    <option value="" disabled selected>-- Chọn thiết bị/vật tư --</option>
+                    {% for item in items %}
+                        <option value="{{ item.MaVatTu }}">{{ item.TenVatTu }} (Tồn: {{ item.SoLuongTon }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="transaction_type" class="form-label">Loại giao dịch *</label>
+                    <select id="transaction_type" name="transaction_type" class="form-control" onchange="toggleRoomSelect()" required>
+                        <option value="Nhập kho" selected>Nhập kho (+ Tăng tồn)</option>
+                        <option value="Xuất lắp đặt">Xuất lắp đặt (- Giảm tồn)</option>
+                    </select>
+                </div>
+                <div class="form-col form-group">
+                    <label for="quantity" class="form-label">Số lượng giao dịch *</label>
+                    <input type="number" id="quantity" name="quantity" class="form-control" min="1" placeholder="Nhập số lượng..." required>
+                </div>
+            </div>
+
+            <div class="form-group" id="room-select-group">
+                <label for="room_id" class="form-label">Chọn phòng nhận thiết bị *</label>
+                <select id="room_id" name="room_id" class="form-control" disabled>
+                    <option value="" disabled selected>-- Chọn phòng nhận --</option>
+                    {% for r in rooms %}
+                        <option value="{{ r.MaTaiSan }}">{{ r.KhuVuc }} - Phòng {{ r.SoPhong }} ({{ r.TrangThai }})</option>
+                    {% endfor %}
+                </select>
+                <small style="color: var(--text-muted); font-size: 0.8rem;">Chỉ bắt buộc chọn khi loại giao dịch là "Xuất lắp đặt" để tự động cập nhật danh sách thiết bị của phòng.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="reason" class="form-label">Nội dung / Lý do giao dịch *</label>
+                <input type="text" id="reason" name="reason" class="form-control" placeholder="Ví dụ: Nhập kho lô hàng mới, hoặc Lắp bổ sung điều hòa cho phòng 202..." required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-square-check"></i> Xác nhận giao dịch kho
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleRoomSelect() {
+    const type = document.getElementById('transaction_type').value;
+    const roomSelect = document.getElementById('room_id');
+    
+    if (type === 'Xuất lắp đặt') {
+        roomSelect.disabled = false;
+        roomSelect.required = true;
+    } else {
+        roomSelect.disabled = true;
+        roomSelect.required = false;
+        roomSelect.value = "";
+    }
+}
+</script>
+{% endblock %}

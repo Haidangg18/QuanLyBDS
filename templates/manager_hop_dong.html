@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Lập Hợp Đồng Mới - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-signature"></i> Lập Hợp Đồng Chính Thức</h1>
+    <a href="{{ url_for('manager_ca_thu', day=room.HanThanhToan) }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Ca Thu {{ room.HanThanhToan }}</a>
+</div>
+
+<div class="layout-split">
+    <!-- Cột trái: Form nhập hợp đồng -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-file-contract"></i> Thông tin hợp đồng</h3>
+        <form action="{{ url_for('manager_hop_dong', room_id=room.MaTaiSan) }}" method="POST">
+            <!-- Đính kèm các trường ẩn từ phiếu chốt khách để lưu vào bảng khách thuê -->
+            <input type="hidden" name="tenant_name" value="{{ deal.TenKhach }}">
+            <input type="hidden" name="tenant_phone" value="{{ deal.SoDienThoaiKhach }}">
+            <input type="hidden" name="tenant_cccd" value="{{ deal.CCCD }}">
+            <input type="hidden" name="deal_id" value="{{ deal.MaChotKhach }}">
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="start_date" class="form-label">Ngày bắt đầu hợp đồng *</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" onchange="calculateProRated()" required>
+                </div>
+                <div class="form-col form-group">
+                    <label for="end_date" class="form-label">Ngày kết thúc hợp đồng *</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="duration" class="form-label">Thời hạn thuê (Tháng) *</label>
+                    <input type="number" id="duration" name="duration" class="form-control" min="1" placeholder="Ví dụ: 6, 12..." required>
+                </div>
+                <div class="form-col form-group">
+                    <label for="deposit_received" class="form-label">Số tiền cọc thực tế nhận (VND) *</label>
+                    <input type="number" step="0.01" id="deposit_received" name="deposit_received" class="form-control" value="{{ deal.TienCoc }}" oninput="calculateProRated()" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="contract_notes" class="form-label">Ghi chú hợp đồng</label>
+                <textarea id="contract_notes" name="contract_notes" rows="3" class="form-control" placeholder="Nhập ghi chú cụ thể của hợp đồng..."></textarea>
+            </div>
+
+            <!-- Bảng tính thử Tiền lẻ ngày động -->
+            <div class="billing-summary" id="pro-rated-calc-box" style="display: none;">
+                <h4><i class="fa-solid fa-calculator"></i> Tính thử tiền lẻ ngày (Pro-rated Billing)</h4>
+                <div class="billing-item">
+                    <span>Số ngày ở lẻ thực tế:</span>
+                    <span id="calc-days" style="font-weight: 600; color: #fff;">0 ngày</span>
+                </div>
+                <div class="billing-item">
+                    <span>Tiền nhà lẻ ngày:</span>
+                    <span id="calc-room-fee" style="font-weight: 600; color: #fff;">0.00 VND</span>
+                </div>
+                <div class="billing-item">
+                    <span>Tiền dịch vụ lẻ ngày (cố định):</span>
+                    <span id="calc-service-fee" style="font-weight: 600; color: #fff;">0.00 VND</span>
+                </div>
+                <div class="billing-item">
+                    <span>Tiền cọc thực tế:</span>
+                    <span id="calc-deposit" style="font-weight: 600; color: #fff;">0.00 VND</span>
+                </div>
+                <div class="billing-total">
+                    <span>Tổng hóa đơn đầu tiên:</span>
+                    <span id="calc-total">0.00 VND</span>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; line-height: 1.3;">
+                    * Lưu ý: Số ngày lẻ được tính từ Ngày bắt đầu đến Ngày ca thu tiếp theo (mùng {{ room.HanThanhToan }}). Tiền nhà lẻ = (Giá thuê / 30) * Số ngày. Tiền dịch vụ lẻ = (250.000 / 30) * Số ngày.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                <i class="fa-solid fa-circle-check"></i> Kích hoạt hợp đồng & Tạo hóa đơn đầu tiên
+            </button>
+        </form>
+    </div>
+
+    <!-- Cột phải: Đối chiếu thông tin phòng & chốt cọc -->
+    <div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-file-invoice"></i> Đối chiếu phiếu chốt cọc</h3>
+            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Tên khách:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: #fff;">{{ deal.TenKhach }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số điện thoại:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;">{{ deal.SoDienThoaiKhach }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Căn cước công dân:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;">{{ deal.CCCD if deal.CCCD else 'Chưa cung cấp' }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Tiền cọc giữ chỗ:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--warning);">{{ "{:,.2f}".format(deal.TienCoc) }} VND</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Ngày dự kiến vào:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">{{ deal.NgayDuKienVaoO }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số điện đầu vào:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600;">{{ deal.SoDienDauVao }} kWh</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Người chốt cọc:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;">{{ deal.TenNguoiChot }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-home"></i> Thông tin phòng</h3>
+            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;">{{ room.DiaChi }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số phòng / Tầng:</td>
+                    <td style="padding: 0.75rem 0; text-align: right;"><strong>Phòng {{ room.SoPhong }}</strong> (Tầng {{ room.Tang }})</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-glass);">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá thuê gốc:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: #fff;">{{ "{:,.2f}".format(room.GiaThue) }} VND/tháng</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn thanh toán:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const hanThanhToan = parseInt("{{ room.HanThanhToan }}");
+const giaThue = parseFloat("{{ room.GiaThue }}");
+
+function calculateProRated() {
+    const startDateInput = document.getElementById('start_date').value;
+    const depositInput = parseFloat(document.getElementById('deposit_received').value) || 0;
+    const calcBox = document.getElementById('pro-rated-calc-box');
+    
+    if (!startDateInput) {
+        calcBox.style.display = 'none';
+        return;
+    }
+    
+    calcBox.style.display = 'block';
+    
+    const startDate = new Date(startDateInput);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth(); // 0-11
+    const startDay = startDate.getDate();
+    
+    let targetYear = startYear;
+    let targetMonth = startMonth; // 0-11
+    
+    if (startDay > hanThanhToan) {
+        // Hạn thanh toán dịch sang tháng sau
+        targetMonth += 1;
+        if (targetMonth > 11) {
+            targetMonth = 0;
+            targetYear += 1;
+        }
+    }
+    
+    const targetDate = new Date(targetYear, targetMonth, hanThanhToan);
+    
+    // Tính số ngày
+    const timeDiff = targetDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    if (diffDays < 0) {
+        document.getElementById('calc-days').innerText = "Ngày lỗi (Ngày bắt đầu lớn hơn ca thu)";
+        return;
+    }
+    
+    const roomFee = (giaThue / 30) * diffDays;
+    const serviceFee = (250000 / 30) * diffDays;
+    const totalFee = roomFee + (serviceFee / 1000) + depositInput; // serviceFee trong DB lưu đơn vị nghìn đồng?
+    
+    // Lưu ý đơn vị: Giá dịch vụ trong DB mẫu được lưu là 250.00 (tức là 250k).
+    // Ở đây ta tính theo tỷ lệ của 250.00 đơn vị tiền tệ DB.
+    const dbServiceFee = (250.00 / 30) * diffDays;
+    const dbTotalFee = roomFee + dbServiceFee + depositInput;
+    
+    document.getElementById('calc-days').innerText = diffDays + " ngày";
+    document.getElementById('calc-room-fee').innerText = formatCurrency(roomFee) + " VND";
+    document.getElementById('calc-service-fee').innerText = formatCurrency(dbServiceFee) + " VND";
+    document.getElementById('calc-deposit').innerText = formatCurrency(depositInput) + " VND";
+    document.getElementById('calc-total').innerText = formatCurrency(dbTotalFee) + " VND";
+}
+
+function formatCurrency(value) {
+    return value.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+</script>
+{% endblock %}

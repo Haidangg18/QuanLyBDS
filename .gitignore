@@ -1,0 +1,14 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.idea/
+.vscode/
+
+# Virtual Environments
+venv/
+env/
+
+# Chú ý: Cố tình KHÔNG ignore file MyDatabase.db để thầy cô tải về có sẵn data chấm bài luôn.

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Sale - Bất Động Sản Đăng Vy{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-chart-simple" style="color: var(--accent);"></i> HỆ THỐNG SALE & CTV</h1>
+    <span style="font-size: 0.95rem; color: var(--text-secondary);">Cập nhật ngày {{ current_date }}</span>
+</div>
+
+<!-- Thanh công cụ: Thống kê & Tìm kiếm -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch;">
+    <!-- Khối thống kê nhỏ gọn -->
+    <div class="card" style="flex: 1; padding: 1rem; margin-bottom: 0; display: flex; align-items: center; justify-content: center; min-width: 250px;">
+        <div style="display: flex; gap: 1rem; width: 100%; justify-content: space-around;">
+            <div style="text-align: center; border-right: 1px solid #e2e8f0; padding-right: 1rem; flex: 1;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;"><i class="fa-solid fa-house-chimney-user"></i> Phòng trống</span>
+                <strong style="font-size: 1.5rem; color: var(--accent);">{{ total_empty_rooms }}</strong>
+            </div>
+            <div style="text-align: center; flex: 1;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;"><i class="fa-solid fa-handshake"></i> Lượt chốt</span>
+                <strong style="font-size: 1.5rem; color: #06b6d4;">{{ total_my_deals }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khối tìm kiếm & Lọc -->
+    <div class="card" style="flex: 2; padding: 1rem; margin-bottom: 0; display: flex; align-items: center; gap: 1rem; min-width: 350px;">
+        <!-- Thanh tìm kiếm văn bản -->
+        <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.8rem;">
+            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary);"></i>
+            <input type="text" id="search-input" placeholder="Nhập địa chỉ nhà, số phòng để tìm nhanh..." onkeyup="filterRooms()" style="border: none; outline: none; background: transparent; width: 100%; font-size: 0.95rem; font-family: inherit; color: var(--text-primary);">
+        </div>
+        <!-- Bộ lọc Khu vực -->
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <select id="area-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px;">
+                <option value="ALL">-- Lọc theo khu vực --</option>
+                {% for area in areas %}
+                    <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <!-- Bộ lọc Loại hình -->
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <select id="type-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px;">
+                <option value="ALL">-- Tất cả loại hình --</option>
+                <option value="1">Phòng trọ</option>
+                <option value="2">Nhà nguyên căn</option>
+                <option value="3">Mặt bằng</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Danh sách phòng trống -->
+<div class="card">
+    <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống cần chốt</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
+                    <th>Khu Vực</th>
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Địa Chỉ</th>
+                    <th>Phòng</th>
+                    <th>Giá Phòng (VND)</th>
+                    <th>Ghi Chú</th>
+                    <th>Thiết Bị</th>
+                    <th>NV Chốt Cũ</th>
+                    <th>Ngày Trống</th>
+                    <th>Hoa Hồng</th>
+                    <th style="text-align: center; width: 140px;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody id="rooms-tbody">
+                {% if empty_rooms %}
+                    {% for r in empty_rooms %}
+                    <tr class="room-row" data-area="{{ r.KhuVuc }}" data-type="{{ r.MaLoaiTaiSan }}">
+                        <td><strong>{{ r.KhuVuc }}</strong></td>
+                        <td style="text-align: center;">{{ loop.index }}</td>
+                        <td>{{ r.DiaChi }}</td>
+                        <td><span class="badge badge-trong" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
+                        <td style="font-weight: 700;">{{ "{:,.2f}".format(r.GiaThue) }}</td>
+                        <td>{{ r.GhiChu if r.GhiChu else '-' }}</td>
+                        <td>
+                            {% if r.ThietBi %}
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fa-solid fa-cubes"></i> {{ r.ThietBi }}</span>
+                            {% else %}
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Không có thiết bị</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ r.TenNhanVienChotCu if r.TenNhanVienChotCu else '-' }}</strong></td>
+                        <td>{{ r.NgayTrong if r.NgayTrong else '-' }}</td>
+                        <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(r.HoaHong) }}</td>
+                        <td style="text-align: center;">
+                            <a href="{{ url_for('sale_chot_coc', room_id=r.MaTaiSan) }}" class="btn btn-primary btn-sm" style="width: 100%; background: linear-gradient(135deg, var(--accent), #0077b6);">
+                                <i class="fa-solid fa-handshake"></i> Chốt khách
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy phòng trống nào.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterRooms() {
+    const areaValue = document.getElementById('area-filter').value;
+    const typeValue = document.getElementById('type-filter').value;
+    const searchValue = document.getElementById('search-input').value.toLowerCase().trim();
+    const rows = document.getElementsByClassName('room-row');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowArea = row.getAttribute('data-area');
+        const rowType = row.getAttribute('data-type');
+        
+        // Trích xuất chuỗi text của phòng và địa chỉ
+        const roomNumText = row.querySelector('.badge-trong').textContent.toLowerCase();
+        const addressText = row.cells[2].textContent.toLowerCase();
+        const areaText = row.cells[0].textContent.toLowerCase();
+        
+        const matchesArea = (areaValue === 'ALL' || rowArea === areaValue);
+        const matchesType = (typeValue === 'ALL' || rowType === typeValue);
+        const matchesSearch = (
+            roomNumText.includes(searchValue) || 
+            addressText.includes(searchValue) ||
+            areaText.includes(searchValue)
+        );
+        
+        if (matchesArea && matchesType && matchesSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

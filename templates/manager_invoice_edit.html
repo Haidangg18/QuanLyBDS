@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh sửa hóa đơn phòng {{ room.SoPhong }} - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Chỉnh Sửa Hóa Đơn Kỳ {{ invoice.Thang }}/{{ invoice.Nam }}</h1>
+    <a href="{{ url_for('shared_invoices', room_id=room.MaTaiSan) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Quay lại danh sách hóa đơn</a>
+</div>
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h3 style="margin-bottom: 1.5rem; color: var(--accent);">Phòng {{ room.SoPhong }} - {{ room.DiaChi }}</h3>
+    
+    <div style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid var(--accent);">
+        <p style="margin: 0 0 0.5rem 0;"><strong>Chỉ số cũ:</strong> <span class="badge badge-secondary">{{ chi_so_dien.ChiSoCu if chi_so_dien else 0 }}</span></p>
+        <p style="margin: 0 0 0.5rem 0;"><strong>Chỉ số mới hiện tại:</strong> <span class="badge badge-trong">{{ chi_so_dien.ChiSoMoi if chi_so_dien else invoice.SoDien }}</span></p>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">* Việc cập nhật lại số điện sẽ tự động tính toán lại số tiền điện và tổng cộng của hóa đơn này.</p>
+    </div>
+
+    <form action="{{ url_for('manager_invoice_edit', invoice_id=invoice.MaHoaDon) }}" method="POST">
+        <div class="form-group">
+            <label for="new_index" class="form-label">Chỉ số điện đúng mới đo được *</label>
+            <input type="number" id="new_index" name="new_index" class="form-control" 
+                   value="{{ chi_so_dien.ChiSoMoi if chi_so_dien else invoice.SoDien }}" 
+                   min="{{ chi_so_dien.ChiSoCu if chi_so_dien else 0 }}" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi hóa đơn
+        </button>
+    </form>
+</div>
+{% endblock %}

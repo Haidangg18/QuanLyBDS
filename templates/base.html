@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hệ thống Quản lý Bất động sản{% endblock %}</title>
+    <!-- CSS Tùy chỉnh -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Biểu tượng Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <!-- Navbar cho người dùng đã đăng nhập -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <i class="fa-solid fa-building-user"></i>
+                <span>Bất Động Sản Đăng Vy</span>
+            </a>
+            
+            <ul class="nav-menu">
+                {% if session.get('role_id') == 3 %}
+                    <!-- Vai trò Sale -->
+                    <li><a href="{{ url_for('sale_dashboard') }}" class="nav-link {% if request.path == url_for('sale_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-simple"></i> Dashboard</a></li>
+                    <li><a href="{{ url_for('sale_bookings') }}" class="nav-link {% if request.path == url_for('sale_bookings') %}active{% endif %}"><i class="fa-solid fa-handshake"></i> Phòng chốt của bạn</a></li>
+                {% elif session.get('role_id') == 2 %}
+                    <!-- Vai trò Vận hành -->
+                    <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
+                    <li><a href="{{ url_for('manager_thanhtoan') }}" class="nav-link {% if request.path == url_for('manager_thanhtoan') %}active{% endif %}"><i class="fa-solid fa-credit-card"></i> Thanh toán</a></li>
+                    <li><a href="{{ url_for('shared_contracts') }}" class="nav-link {% if request.path == url_for('shared_contracts') %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
+                    <li><a href="{{ url_for('shared_tenants') }}" class="nav-link {% if request.path == url_for('shared_tenants') %}active{% endif %}"><i class="fa-solid fa-people-roof"></i> Khách thuê</a></li>
+                    <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho vật tư</a></li>
+                {% elif session.get('role_id') == 1 %}
+                    <!-- Vai trò Admin -->
+                    <li><a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-pie"></i> Báo cáo vĩ mô</a></li>
+                    <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
+                    <li><a href="{{ url_for('manager_thanhtoan') }}" class="nav-link {% if request.path == url_for('manager_thanhtoan') %}active{% endif %}"><i class="fa-solid fa-credit-card"></i> Thanh toán</a></li>
+                    <li><a href="{{ url_for('shared_contracts') }}" class="nav-link {% if request.path == url_for('shared_contracts') %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
+                    <li><a href="{{ url_for('shared_tenants') }}" class="nav-link {% if request.path == url_for('shared_tenants') %}active{% endif %}"><i class="fa-solid fa-people-roof"></i> Khách thuê</a></li>
+                    <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho vật tư</a></li>
+                    <li><a href="{{ url_for('admin_employees') }}" class="nav-link {% if request.path == url_for('admin_employees') %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Nhân sự</a></li>
+                {% endif %}
+            </ul>
+
+            <div class="user-info user-highlight">
+                <span class="user-name"><i class="fa-regular fa-user"></i> {{ session.get('fullname') }}</span>
+                {% if session.get('role_id') == 1 %}
+                    <span class="user-role role-admin">Admin</span>
+                {% elif session.get('role_id') == 2 %}
+                    <span class="user-role role-manager">Vận hành</span>
+                {% elif session.get('role_id') == 3 %}
+                    <span class="user-role role-sale">Sale</span>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" style="margin-left: 0.5rem;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="container">
+        <!-- Thông báo Alert Flask Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }}">
+                        <i class="fa-solid {{ 'fa-circle-exclamation' if category == 'error' else 'fa-circle-check' if category == 'success' else 'fa-circle-info' }}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Hệ thống Quản lý Bất động sản Đăng Vy. Thiết kế chuyên nghiệp, vận hành mượt mà.</p>
+    </footer>
+
+    <script>
+        // Tự động ẩn thông báo flash sau 3 giây
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    alert.style.transition = 'opacity 0.5s ease';
+                    alert.style.opacity = '0';
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500);
+                }, 3000);
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
