@@ -369,6 +369,7 @@ def sale_chot_coc(room_id):
             
         move_in_date = request.form.get('move_in_date')
         duration = int(request.form.get('duration'))
+        so_nguoi = int(request.form.get('so_nguoi', 1))
         elec_start = int(request.form.get('elec_start'))
         notes = request.form.get('notes')
         
@@ -389,10 +390,10 @@ def sale_chot_coc(room_id):
             # 2. Thêm hợp đồng mới với trạng thái Giữ phòng
             cursor.execute(
                 """
-                INSERT INTO HOP_DONG (MaTaiSan, MaKhachThue, NgayBatDau, NgayKetThuc, ThoiHanThue, TienCoc, TrangThai, GhiChu, GiaThue)
-                VALUES (?, ?, ?, ?, ?, ?, 'Giữ phòng', ?, ?)
+                INSERT INTO HOP_DONG (MaTaiSan, MaKhachThue, NgayBatDau, NgayKetThuc, ThoiHanThue, TienCoc, TrangThai, GhiChu, GiaThue, SoNguoi)
+                VALUES (?, ?, ?, ?, ?, ?, 'Giữ phòng', ?, ?, ?)
                 """,
-                (room_id, khach_thue_id, move_in_date, end_date_str, duration, deposit_amount, notes, gia_thue)
+                (room_id, khach_thue_id, move_in_date, end_date_str, duration, deposit_amount, notes, gia_thue, so_nguoi)
             )
             hop_dong_id = cursor.lastrowid
             
@@ -431,7 +432,7 @@ def sale_chot_coc(room_id):
                 gia_dv = config['GiaDichVu']
                 
             # Tiền dịch vụ lẻ ngày (trong DB lưu là nghìn đồng, nên chia 1000)
-            tien_dich_vu_le = ((gia_dv / 1000.0) / 30.0) * actual_days
+            tien_dich_vu_le = (((gia_dv * so_nguoi) / 1000.0) / 30.0) * actual_days
             
             # Tổng tiền lẻ ngày hóa đơn đầu tiên = Tiền nhà lẻ + Tiền dịch vụ lẻ + Tiền cọc thực tế
             tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + deposit_amount
@@ -887,8 +888,11 @@ def manager_dien_nuoc_form(room_id):
             power_consumed = new_index - old_index
             # Tiền điện tính bằng nghìn đồng (k)
             tien_dien = (power_consumed * active_config['GiaDien']) / 1000.0
-            # Tiền dịch vụ cố định (trong DB lưu là nghìn đồng, ví dụ 250k)
-            tien_dv = active_config['GiaDichVu'] / 1000.0
+            
+            # Tiền dịch vụ cố định (nhân với số người ở)
+            so_nguoi = contract['SoNguoi'] if contract['SoNguoi'] else 1
+            tien_dv = (active_config['GiaDichVu'] * so_nguoi) / 1000.0
+            
             # Tiền nhà cố định của tháng
             tien_nha = contract['GiaThue'] if contract['GiaThue'] is not None else room['GiaThue']
             

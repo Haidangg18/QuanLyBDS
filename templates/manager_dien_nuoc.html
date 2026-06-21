@@ -72,8 +72,8 @@
                     <span id="preview-elec-fee" style="font-weight: 600; color: var(--text-primary);">0.00 VND</span>
                 </div>
                 <div class="billing-item">
-                    <span>Dịch vụ cố định:</span>
-                    <span style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(active_config.GiaDichVu) }} VND</span>
+                    <span>Dịch vụ cố định ({% if contract.SoNguoi %}{{ contract.SoNguoi }}{% else %}1{% endif %} người):</span>
+                    <span style="font-weight: 600; color: var(--text-primary);">{{ "{:,.2f}".format(active_config.GiaDichVu * (contract.SoNguoi or 1)) }} VND</span>
                 </div>
                 <div class="billing-total">
                     <span>Tổng tiền hóa đơn:</span>
@@ -111,6 +111,10 @@
                 <tr style="border-bottom: 1px solid #e2e8f0;">
                     <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá phòng cố định:</td>
                     <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số người ở:</td>
+                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info-text);">{% if contract.SoNguoi %}{{ contract.SoNguoi }}{% else %}1{% endif %} người</td>
                 </tr>
                 <tr>
                     <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn thanh toán:</td>
@@ -198,7 +202,8 @@
 <script>
 const giaThue = parseFloat("{{ room.GiaThue }}");
 const giaDien = parseFloat("{{ active_config.GiaDien }}");
-const giaDichVu = parseFloat("{{ active_config.GiaDichVu }}");
+const soNguoi = parseInt("{% if contract.SoNguoi %}{{ contract.SoNguoi }}{% else %}1{% endif %}") || 1;
+const giaDichVu = parseFloat("{{ active_config.GiaDichVu }}") * soNguoi;
 const oldIndex = parseFloat("{{ old_index }}");
 
 function calculatePower() {
