@@ -122,25 +122,31 @@ const roomDangThue = parseInt("{{ room_stats.get('DangThue', 0) }}") || 0;
 // Biểu đồ cột tài chính
 const ctxFinancial = document.getElementById('financialChart').getContext('2d');
 new Chart(ctxFinancial, {
-    type: 'bar',
+    type: 'line',
     data: {
         labels: chartLabels.length > 0 ? chartLabels : ['Tháng này'],
         datasets: [
             {
                 label: 'Doanh thu thực thu',
                 data: chartRevenue.length > 0 ? chartRevenue : [0],
-                backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                backgroundColor: 'rgba(16, 185, 129, 0.2)', // Nền mờ cho Area chart
                 borderColor: '#10b981',
-                borderWidth: 1.5,
-                borderRadius: 4
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4, // Tạo đường cong mượt
+                pointBackgroundColor: '#10b981',
+                pointRadius: 4
             },
             {
                 label: 'Công nợ chưa thu',
                 data: chartDebt.length > 0 ? chartDebt : [0],
-                backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
                 borderColor: '#ef4444',
-                borderWidth: 1.5,
-                borderRadius: 4
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#ef4444',
+                pointRadius: 4
             }
         ]
     },
