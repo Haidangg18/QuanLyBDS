@@ -3,101 +3,279 @@
 {% block title %}Dashboard Admin - QL Bất Động Sản{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<style>
+    /* Custom Premium Dashboard Styles */
+    .admin-hero {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+        border-radius: var(--border-radius);
+        padding: 2.5rem;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 15px 35px rgba(2, 132, 199, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .admin-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.5px;
+    }
+    .hero-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    .premium-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .premium-stat-card {
+        background: var(--bg-glass);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        border-radius: var(--border-radius);
+        padding: 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--box-shadow);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+    .premium-stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.08);
+    }
+    .premium-stat-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+    }
+    .stat-revenue::after { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-debt::after { background: linear-gradient(90deg, #ef4444, #f87171); }
+    
+    .stat-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+    .stat-revenue .stat-icon-wrapper { background: var(--success-bg); color: var(--success); }
+    .stat-debt .stat-icon-wrapper { background: var(--danger-bg); color: var(--danger); }
+    
+    .chart-container {
+        position: relative;
+        height: 320px;
+        width: 100%;
+    }
+    .premium-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+    }
+    .premium-table th {
+        background: transparent;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+        padding: 10px 20px;
+    }
+    .premium-table td {
+        background: var(--bg-secondary);
+        padding: 1.2rem 1.5rem;
+        vertical-align: middle;
+        border-top: 1px solid var(--border-glass);
+        border-bottom: 1px solid var(--border-glass);
+    }
+    .premium-table td:first-child {
+        border-left: 1px solid var(--border-glass);
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+    .premium-table td:last-child {
+        border-right: 1px solid var(--border-glass);
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+    .premium-table tr {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .premium-table tbody tr:hover {
+        transform: scale(1.01);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        z-index: 2;
+        position: relative;
+    }
+</style>
+
+<div class="admin-hero">
     <div>
-        <h1 class="page-title"><i class="fa-solid fa-square-poll-vertical" style="color: var(--accent);"></i> Dashboard Quản Trị Tối Cao</h1>
-        <span style="font-size: 0.95rem; color: var(--text-secondary);">Thống kê tài chính vĩ mô và tỷ lệ lấp đầy tài sản</span>
+        <h1 class="hero-title">Xin chào, {{ session.get('fullname', 'Admin') }}! 👋</h1>
+        <div class="hero-subtitle">Chào mừng trở lại Trung tâm Chỉ huy. Dưới đây là bức tranh tài chính hôm nay.</div>
     </div>
-    <a href="{{ url_for('admin_config') }}" class="btn btn-secondary btn-sm">
-        <i class="fa-solid fa-gears"></i> Cấu hình đơn giá hệ thống
-    </a>
-</div>
-
-<!-- Khối số liệu tài chính nhanh -->
-<div class="dashboard-grid">
-    <!-- Khối 1: Tổng số tiền doanh thu thực tế thu về -->
-    <div class="stat-card" style="border-left: 4px solid var(--success);">
-        <div class="stat-info">
-            <span class="stat-label">Tổng doanh thu (Thực thu)</span>
-            <span class="stat-value" style="color: var(--success);">{{ "{:,.2f}".format(total_revenue) }} VND</span>
-        </div>
-        <div class="stat-icon" style="color: var(--success);"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-    </div>
-
-    <!-- Khối 2: Tổng số tiền công nợ còn bị khách thuê nợ -->
-    <div class="stat-card" style="border-left: 4px solid var(--danger);">
-        <div class="stat-info">
-            <span class="stat-label">Tổng công nợ (Chưa thu)</span>
-            <span class="stat-value" style="color: var(--danger);">{{ "{:,.2f}".format(total_debt) }} VND</span>
-        </div>
-        <div class="stat-icon" style="color: var(--danger);"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+    <div style="z-index: 10;">
+        <a href="{{ url_for('admin_config') }}" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(10px); padding: 0.8rem 1.5rem; font-weight: 600; border-radius: 10px;">
+            <i class="fa-solid fa-sliders" style="margin-right: 5px;"></i> Tùy chỉnh Bảng giá
+        </a>
     </div>
 </div>
 
-<!-- Khối Biểu đồ trực quan -->
-<div class="layout-split" style="margin-bottom: 1.5rem;">
+<div class="premium-stat-grid">
+    <div class="premium-stat-card stat-revenue">
+        <div>
+            <div style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Tổng Doanh Thu Thực Tế</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary);">{{ "{:,.0f}".format(total_revenue) }} <span style="font-size: 1.2rem; color: var(--text-muted);">VND</span></div>
+        </div>
+        <div class="stat-icon-wrapper">
+            <i class="fa-solid fa-wallet"></i>
+        </div>
+    </div>
+    
+    <div class="premium-stat-card stat-debt">
+        <div>
+            <div style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Công Nợ Tồn Đọng</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary);">{{ "{:,.0f}".format(total_debt) }} <span style="font-size: 1.2rem; color: var(--text-muted);">VND</span></div>
+        </div>
+        <div class="stat-icon-wrapper">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+        </div>
+    </div>
+</div>
+
+<div class="layout-split" style="gap: 2rem; margin-bottom: 2rem;">
     <!-- Biểu đồ cột Tài chính -->
-    <div class="card" style="display: flex; flex-direction: column;">
-        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-chart-column" style="color: var(--accent);"></i> Thống kê dòng tiền (VND)</h3>
-        <div style="flex: 1; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+    <div class="card" style="flex: 3; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.3rem; color: var(--text-primary); margin: 0;"><i class="fa-solid fa-chart-column" style="color: var(--accent); margin-right: 8px;"></i> Cân đối Dòng tiền</h3>
+            <span class="badge" style="background: var(--info-bg); color: var(--info-text); padding: 6px 12px;"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Live</span>
+        </div>
+        <div class="chart-container">
             <canvas id="financialChart"></canvas>
         </div>
     </div>
 
     <!-- Biểu đồ tròn Trạng thái phòng -->
-    <div class="card" style="display: flex; flex-direction: column;">
-        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-chart-pie" style="color: var(--success);"></i> Tỷ lệ lấp đầy tài sản</h3>
-        <div style="flex: 1; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+    <div class="card" style="flex: 2; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.3rem; color: var(--text-primary); margin: 0;"><i class="fa-solid fa-chart-pie" style="color: var(--success); margin-right: 8px;"></i> Tỷ lệ Lấp đầy</h3>
+        </div>
+        <div class="chart-container">
             <canvas id="occupancyChart"></canvas>
         </div>
     </div>
 </div>
 
-<!-- Khối bảng thống kê chi tiết -->
-<div class="card">
-    <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-list-ul"></i> Số liệu chi tiết trạng thái phòng</h3>
-    <div class="table-responsive">
-        <table class="table">
+<div class="card" style="padding: 2.5rem 2rem;">
+    <h3 style="font-size: 1.4rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-building-circle-check" style="color: var(--warning);"></i> Phân tích Tài sản Chi tiết
+    </h3>
+    <div class="table-responsive" style="overflow: visible;">
+        <table class="premium-table">
             <thead>
-                <tr style="background: #f8fafc;">
-                    <th>Trạng thái kinh doanh</th>
-                    <th style="text-align: right; width: 200px;">Số lượng phòng</th>
-                    <th style="text-align: right; width: 200px;">Tỷ lệ (%)</th>
+                <tr>
+                    <th style="text-align: left;">Trạng Thái Phòng</th>
+                    <th style="text-align: right;">Số Lượng</th>
+                    <th style="text-align: right;">Phần Trăm (%)</th>
+                    <th style="text-align: center;">Chỉ Báo</th>
                 </tr>
             </thead>
             <tbody>
                 {% set total_rooms = room_stats.get('Trong', 0) + room_stats.get('Giữ phòng', 0) + room_stats.get('DangThue', 0) %}
+                
+                {% set percent_trong = 0 %}
+                {% set percent_giu = 0 %}
+                {% set percent_thue = 0 %}
+                {% if total_rooms > 0 %}
+                    {% set percent_trong = (room_stats.get('Trong', 0) / total_rooms) * 100 %}
+                    {% set percent_giu = (room_stats.get('Giữ phòng', 0) / total_rooms) * 100 %}
+                    {% set percent_thue = (room_stats.get('DangThue', 0) / total_rooms) * 100 %}
+                {% endif %}
+
                 <tr>
-                    <td><span class="badge badge-trong"><i class="fa-solid fa-house-chimney-user"></i> Trống (Trong)</span> - Sẵn sàng cho thuê</td>
-                    <td style="text-align: right; font-weight: 700; color: var(--text-primary);">{{ room_stats.get('Trong', 0) }} phòng</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--text-secondary);">
-                        {% if total_rooms > 0 %}
-                            {{ "{:.1f}%".format((room_stats.get('Trong', 0) / total_rooms) * 100) }}
-                        {% else %}0.0%{% endif %}
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                <i class="fa-solid fa-door-open"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 1.1rem;">Trống (Sẵn sàng)</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Phòng đang chờ khách thuê mới</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 800; font-size: 1.3rem;">{{ room_stats.get('Trong', 0) }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #10b981; font-size: 1.1rem;">{{ "{:.1f}%".format(percent_trong) }}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div style="width: 100%; max-width: 150px; height: 8px; background: #e2e8f0; border-radius: 4px; margin: 0 auto; overflow: hidden;">
+                            <div style="height: 100%; background: #10b981; width: {{ percent_trong }}%; border-radius: 4px;"></div>
+                        </div>
                     </td>
                 </tr>
+                
                 <tr>
-                    <td><span class="badge badge-datcoc"><i class="fa-solid fa-handshake"></i> Giữ phòng</span> - Đang giữ chân khách</td>
-                    <td style="text-align: right; font-weight: 700; color: var(--text-primary);">{{ room_stats.get('Giữ phòng', 0) }} phòng</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--text-secondary);">
-                        {% if total_rooms > 0 %}
-                            {{ "{:.1f}%".format((room_stats.get('Giữ phòng', 0) / total_rooms) * 100) }}
-                        {% else %}0.0%{% endif %}
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                <i class="fa-solid fa-handshake-angle"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 1.1rem;">Đã Giữ Chỗ (Cọc)</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Khách đã đóng tiền cọc giữ phòng</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: 800; font-size: 1.3rem;">{{ room_stats.get('Giữ phòng', 0) }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #f59e0b; font-size: 1.1rem;">{{ "{:.1f}%".format(percent_giu) }}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div style="width: 100%; max-width: 150px; height: 8px; background: #e2e8f0; border-radius: 4px; margin: 0 auto; overflow: hidden;">
+                            <div style="height: 100%; background: #f59e0b; width: {{ percent_giu }}%; border-radius: 4px;"></div>
+                        </div>
                     </td>
                 </tr>
+                
                 <tr>
-                    <td><span class="badge badge-dangthue"><i class="fa-solid fa-house-lock"></i> Đang thuê (DangThue)</span> - Đang tạo dòng tiền</td>
-                    <td style="text-align: right; font-weight: 700; color: var(--text-primary);">{{ room_stats.get('DangThue', 0) }} phòng</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--text-secondary);">
-                        {% if total_rooms > 0 %}
-                            {{ "{:.1f}%".format((room_stats.get('DangThue', 0) / total_rooms) * 100) }}
-                        {% else %}0.0%{% endif %}
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(14, 165, 233, 0.1); color: #0ea5e9; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                <i class="fa-solid fa-house-circle-check"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 1.1rem;">Đang Thuê</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Khách đang ở và đóng tiền hàng tháng</div>
+                            </div>
+                        </div>
                     </td>
-                </tr>
-                <tr style="background: rgba(2, 132, 199, 0.05); font-weight: 700;">
-                    <td>TỔNG CỘNG TÀI SẢN HỆ THỐNG</td>
-                    <td style="text-align: right; color: var(--text-primary);">{{ total_rooms }} phòng</td>
-                    <td style="text-align: right; color: var(--text-primary);">100.0%</td>
+                    <td style="text-align: right; font-weight: 800; font-size: 1.3rem;">{{ room_stats.get('DangThue', 0) }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0ea5e9; font-size: 1.1rem;">{{ "{:.1f}%".format(percent_thue) }}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div style="width: 100%; max-width: 150px; height: 8px; background: #e2e8f0; border-radius: 4px; margin: 0 auto; overflow: hidden;">
+                            <div style="height: 100%; background: #0ea5e9; width: {{ percent_thue }}%; border-radius: 4px;"></div>
+                        </div>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -106,9 +284,14 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Nhập thư viện Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Format tiền tệ cho Tooltip Chart.js
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+});
+
 // Dữ liệu tài chính
 const totalRevenue = parseFloat("{{ total_revenue }}") || 0;
 const totalDebt = parseFloat("{{ total_debt }}") || 0;
@@ -118,42 +301,70 @@ const roomTrong = parseInt("{{ room_stats.get('Trong', 0) }}") || 0;
 const roomDatCoc = parseInt("{{ room_stats.get('Giữ phòng', 0) }}") || 0;
 const roomDangThue = parseInt("{{ room_stats.get('DangThue', 0) }}") || 0;
 
+// Cấu hình phông chữ chung cho Chart.js
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.color = '#64748b';
+
 // Biểu đồ cột tài chính
 const ctxFinancial = document.getElementById('financialChart').getContext('2d');
+// Tạo Gradient cho cột 1
+let gradientRev = ctxFinancial.createLinearGradient(0, 0, 0, 400);
+gradientRev.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+gradientRev.addColorStop(1, 'rgba(16, 185, 129, 0.2)');
+
+// Tạo Gradient cho cột 2
+let gradientDebt = ctxFinancial.createLinearGradient(0, 0, 0, 400);
+gradientDebt.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
+gradientDebt.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
+
 new Chart(ctxFinancial, {
     type: 'bar',
     data: {
         labels: ['Doanh thu thực thu', 'Công nợ chưa thu'],
         datasets: [{
-            label: 'Số tiền (VND)',
+            label: 'Số tiền',
             data: [totalRevenue, totalDebt],
-            backgroundColor: [
-                'rgba(16, 185, 129, 0.75)', // Emerald
-                'rgba(239, 68, 68, 0.75)'   // Rose
-            ],
-            borderColor: [
-                '#10b981',
-                '#ef4444'
-            ],
-            borderWidth: 1.5,
-            borderRadius: 8
+            backgroundColor: [gradientRev, gradientDebt],
+            borderColor: ['#10b981', '#ef4444'],
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
+            barThickness: 60
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { size: 14, weight: 'bold' },
+                bodyFont: { size: 14 },
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) {
+                        return currencyFormatter.format(context.raw);
+                    }
+                }
+            }
         },
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { color: '#64748b' }
+                grid: { color: 'rgba(226, 232, 240, 0.5)', drawBorder: false },
+                ticks: { 
+                    callback: function(value) {
+                        if (value >= 1000000) return (value / 1000000) + 'M';
+                        if (value >= 1000) return (value / 1000) + 'K';
+                        return value;
+                    }
+                }
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#64748b', font: { weight: 'bold' } }
+                ticks: { font: { weight: 'bold' }, color: '#334155' }
             }
         }
     }
@@ -164,7 +375,7 @@ const ctxOccupancy = document.getElementById('occupancyChart').getContext('2d');
 new Chart(ctxOccupancy, {
     type: 'doughnut',
     data: {
-        labels: ['Trống (Trong)', 'Giữ phòng', 'Đang thuê (DangThue)'],
+        labels: ['Trống (Sẵn sàng)', 'Đã cọc', 'Đang thuê'],
         datasets: [{
             data: [roomTrong, roomDatCoc, roomDangThue],
             backgroundColor: [
@@ -172,24 +383,43 @@ new Chart(ctxOccupancy, {
                 '#f59e0b', // amber
                 '#0ea5e9'  // sky blue
             ],
-            borderWidth: 2,
-            borderColor: '#ffffff'
+            borderWidth: 4,
+            borderColor: '#ffffff',
+            hoverOffset: 15
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+            padding: 20
+        },
         plugins: {
             legend: {
                 position: 'bottom',
                 labels: {
-                    color: '#475569',
-                    font: { family: 'Outfit', weight: 'bold' },
-                    padding: 15
+                    padding: 20,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    font: { weight: '600', size: 13 }
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                padding: 12,
+                bodyFont: { size: 14 },
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        let value = context.raw || 0;
+                        let total = context.chart._metasets[context.datasetIndex].total;
+                        let percentage = Math.round((value / total) * 100) + '%';
+                        return ` ${label}: ${value} phòng (${percentage})`;
+                    }
                 }
             }
         },
-        cutout: '60%'
+        cutout: '70%'
     }
 });
 </script>
