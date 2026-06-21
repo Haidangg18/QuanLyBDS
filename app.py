@@ -1019,18 +1019,31 @@ def manager_kho():
 def admin_dashboard():
     db = get_db()
     
-    # Khối 1: Tổng doanh thu thực tế thu về (Đã thanh toán)
-    rev_row = db.execute(
-        "SELECT SUM(TongTien) FROM HOA_DON WHERE TrangThaiThanhToan = 'Đã thanh toán'"
-    ).fetchone()
-    total_revenue = rev_row[0] if rev_row[0] is not None else 0.0
+    # Lấy dữ liệu tài chính theo tháng (Tối đa 12 tháng gần nhất)
+    monthly_rows = db.execute("""
+        SELECT Nam, Thang, 
+               SUM(CASE WHEN TrangThaiThanhToan = 'Đã thanh toán' THEN TongTien ELSE 0 END) as Revenue,
+               SUM(CASE WHEN TrangThaiThanhToan = 'Chưa thanh toán' THEN TongTien ELSE 0 END) as Debt
+        FROM HOA_DON
+        GROUP BY Nam, Thang
+        ORDER BY Nam ASC, Thang ASC
+        LIMIT 12
+    """).fetchall()
     
-    # Khối 2: Tổng công nợ còn treo (Chưa thanh toán)
-    debt_row = db.execute(
-        "SELECT SUM(TongTien) FROM HOA_DON WHERE TrangThaiThanhToan = 'Chưa thanh toán'"
-    ).fetchone()
-    total_debt = debt_row[0] if debt_row[0] is not None else 0.0
+    chart_labels = []
+    chart_revenue = []
+    chart_debt = []
     
+    total_revenue = 0.0
+    total_debt = 0.0
+    
+    for row in monthly_rows:
+        chart_labels.append(f"T{row['Thang']}/{row['Nam']}")
+        chart_revenue.append(row['Revenue'])
+        chart_debt.append(row['Debt'])
+        total_revenue += row['Revenue']
+        total_debt += row['Debt']
+        
     # Khối 3: Thống kê số lượng phòng theo trạng thái
     rooms = db.execute("SELECT TrangThai, COUNT(*) as count FROM TAI_SAN GROUP BY TrangThai").fetchall()
     
@@ -1044,7 +1057,10 @@ def admin_dashboard():
         'admin_dashboard.html', 
         total_revenue=total_revenue, 
         total_debt=total_debt, 
-        room_stats=room_stats
+        room_stats=room_stats,
+        chart_labels=chart_labels,
+        chart_revenue=chart_revenue,
+        chart_debt=chart_debt
     )
 
 @app.route('/admin/employees', methods=['GET', 'POST'])
