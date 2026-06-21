@@ -1042,15 +1042,17 @@ def admin_dashboard():
         total_revenue += row['Revenue']
         total_debt += row['Debt']
         
-    # Chế thêm số liệu các tháng trước nếu ít dữ liệu (để biểu đồ đẹp hơn)
+    # Chế thêm số liệu các tháng trước nếu ít dữ liệu (để biểu đồ đẹp hơn, đủ 6 tháng)
     import datetime
     import random
-    if len(monthly_rows) <= 1:
+    
+    needed_mock_months = 6 - len(monthly_rows)
+    if needed_mock_months > 0:
         now = datetime.datetime.now()
-        for i in range(5, 0, -1):
+        for i in range(needed_mock_months, 0, -1):
             m = now.month - i
             y = now.year
-            if m <= 0:
+            while m <= 0:
                 m += 12
                 y -= 1
             chart_labels.append(f"T{m}/{y}")
