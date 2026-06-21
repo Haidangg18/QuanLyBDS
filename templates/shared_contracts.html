@@ -17,7 +17,7 @@
                     <th>Số Phòng</th>
                     <th>Địa Chỉ Phòng</th>
                     <th>Khách Thuê</th>
-                    <th>Số Điện Thoại</th>
+                    <th>Số Người Ở</th>
                     <th>Ngày Bắt Đầu</th>
                     <th>Ngày Kết Thúc</th>
                     <th>Thời Hạn (Tháng)</th>
@@ -35,7 +35,7 @@
                         <td><span class="badge badge-dangthue">Phòng {{ c.SoPhong }}</span></td>
                         <td>{{ c.DiaChi }} ({{ c.KhuVuc }})</td>
                         <td><strong>{{ c.TenKhach }}</strong></td>
-                        <td>{{ c.SoDienThoai }}</td>
+                        <td style="text-align: center;">{{ c.SoNguoi or 1 }} người</td>
                         <td>{{ c.NgayBatDau }}</td>
                         <td>{{ c.NgayKetThuc }}</td>
                         <td>{{ c.ThoiHanThue }} tháng</td>

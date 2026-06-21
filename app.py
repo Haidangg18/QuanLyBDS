@@ -107,22 +107,30 @@ def check_contract_activation():
                 )
             db.commit()
 
-        # 2. Lập lịch tự động kích hoạt hợp đồng
+        # 2. Lập lịch tự động kích hoạt hợp đồng (Chỉ kích hoạt khi đóng đủ tiền hệ thống tính hoặc đã thanh toán hóa đơn đầu)
         today_str = date.today().isoformat()
         contracts = db.execute(
-            "SELECT MaHopDong, MaTaiSan FROM HOP_DONG WHERE TrangThai = 'Giữ phòng' AND NgayBatDau <= ?",
+            """
+            SELECT h.MaHopDong, h.MaTaiSan, h.TienCoc, 
+                   (SELECT TongTien FROM HOA_DON WHERE MaHopDong = h.MaHopDong ORDER BY MaHoaDon ASC LIMIT 1) as TongTienHoaDon,
+                   (SELECT TrangThaiThanhToan FROM HOA_DON WHERE MaHopDong = h.MaHopDong ORDER BY MaHoaDon ASC LIMIT 1) as TinhTrangHoaDon
+            FROM HOP_DONG h 
+            WHERE h.TrangThai = 'Giữ phòng' AND h.NgayBatDau <= ?
+            """,
             (today_str,)
         ).fetchall()
         if contracts:
             for c in contracts:
-                db.execute(
-                    "UPDATE HOP_DONG SET TrangThai = 'Đang kích hoạt' WHERE MaHopDong = ?",
-                    (c['MaHopDong'],)
-                )
-                db.execute(
-                    "UPDATE TAI_SAN SET TrangThai = 'DangThue' WHERE MaTaiSan = ?",
-                    (c['MaTaiSan'],)
-                )
+                # Điều kiện: Không có hóa đơn, HOẶC cọc đủ tiền, HOẶC hóa đơn đầu đã thanh toán
+                if (c['TongTienHoaDon'] is None) or (c['TienCoc'] >= c['TongTienHoaDon']) or (c['TinhTrangHoaDon'] == 'Đã thanh toán'):
+                    db.execute(
+                        "UPDATE HOP_DONG SET TrangThai = 'Đang kích hoạt' WHERE MaHopDong = ?",
+                        (c['MaHopDong'],)
+                    )
+                    db.execute(
+                        "UPDATE TAI_SAN SET TrangThai = 'DangThue' WHERE MaTaiSan = ?",
+                        (c['MaTaiSan'],)
+                    )
             db.commit()
     except Exception as e:
         print("Lỗi tự động kích hoạt/di cư hợp đồng:", e)
