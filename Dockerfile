@@ -1,4 +1,3 @@
-# Sử dụng Python 3.10 phiên bản rút gọn (slim)
 FROM python:3.10-slim
 
 # Cài đặt thư mục làm việc trong container

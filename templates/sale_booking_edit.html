@@ -61,6 +61,10 @@
                 <label for="elec_start" class="form-label">Số điện đầu vào (kWh) *</label>
                 <input type="number" id="elec_start" name="elec_start" class="form-control" value="{{ deal.SoDienDauVao }}" required>
             </div>
+            <div class="form-col form-group">
+                <label for="so_nguoi" class="form-label">Số người ở *</label>
+                <input type="number" id="so_nguoi" name="so_nguoi" class="form-control" value="{{ contract.SoNguoi if contract and contract.SoNguoi else 1 }}" min="1" required>
+            </div>
         </div>
 
         <div class="form-group">
@@ -176,8 +180,9 @@
         }
         
         // Calculate pro-rated rent and service fee
+        const soNguoi = parseInt(document.getElementById('so_nguoi').value) || 1;
         const tienNhaLe = (giaPhong / 30.0) * actualDays;
-        const tienDvLe = (giaDichVu / 30.0) * actualDays;
+        const tienDvLe = ((giaDichVu * soNguoi) / 30.0) * actualDays;
         const totalFirstPayment = giaPhong + tienNhaLe + tienDvLe;
         
         const remainingPayment = Math.max(0, totalFirstPayment - depositAmountVal);
@@ -198,6 +203,7 @@
     document.getElementById('move_in_date').addEventListener('change', calculateFirstPayment);
     document.getElementById('deposit_amount').addEventListener('input', calculateFirstPayment);
     document.getElementById('gia_thue').addEventListener('input', calculateFirstPayment);
+    document.getElementById('so_nguoi').addEventListener('input', calculateFirstPayment);
     // Initial run
     calculateFirstPayment();
 </script>

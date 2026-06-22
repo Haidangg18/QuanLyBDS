@@ -84,7 +84,8 @@
     <div>
         <div class="card" style="margin-bottom: 1.5rem;">
             <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-file-invoice"></i> Đối chiếu phiếu chốt cọc</h3>
-            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+            <div class="table-responsive">
+<table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
                 <tr style="border-bottom: 1px solid var(--border-glass);">
                     <td style="padding: 0.75rem 0; color: var(--text-secondary);">Tên khách:</td>
                     <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: #fff;">{{ deal.TenKhach }}</td>
@@ -114,11 +115,13 @@
                     <td style="padding: 0.75rem 0; text-align: right;">{{ deal.TenNguoiChot }}</td>
                 </tr>
             </table>
+</div>
         </div>
 
         <div class="card">
             <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-home"></i> Thông tin phòng</h3>
-            <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+            <div class="table-responsive">
+<table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
                 <tr style="border-bottom: 1px solid var(--border-glass);">
                     <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ:</td>
                     <td style="padding: 0.75rem 0; text-align: right;">{{ room.DiaChi }}</td>
@@ -136,6 +139,7 @@
                     <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
                 </tr>
             </table>
+</div>
         </div>
     </div>
 </div>

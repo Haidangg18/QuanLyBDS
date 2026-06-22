@@ -53,6 +53,10 @@
                 <label for="deposit" class="form-label">Tiền cọc (VND)</label>
                 <input type="number" id="deposit" name="deposit" class="form-control" min="0" value="{{ contract.TienCoc or 0 }}">
             </div>
+            <div class="form-col form-group">
+                <label for="so_nguoi" class="form-label">Số người ở *</label>
+                <input type="number" id="so_nguoi" name="so_nguoi" class="form-control" value="{{ contract.SoNguoi or 1 }}" min="1" required>
+            </div>
         </div>
 
         <div class="form-group">

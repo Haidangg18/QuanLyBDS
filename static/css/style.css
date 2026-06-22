@@ -610,6 +610,7 @@ body {
 /* Filters */
 .filter-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     align-items: center;
 }
@@ -677,4 +678,146 @@ footer {
     border-top: 1px solid rgba(15, 23, 42, 0.05);
     font-size: 0.85rem;
     color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Responsive Mobile Design & Components
+   ========================================================================== */
+
+/* Hamburger Menu Toggle (Hidden on Desktop) */
+.menu-toggle {
+    display: none;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.5rem;
+}
+
+/* Global Table Responsive Wrapper */
+.table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+}
+
+.table-responsive .table {
+    min-width: 800px; /* Forces horizontal scrolling on small screens */
+    margin-bottom: 0;
+    box-shadow: none; /* Remove duplicate shadow */
+}
+
+@media (max-width: 992px) {
+    /* Navbar Mobile Layout */
+    .menu-toggle {
+        display: block; /* Show hamburger */
+    }
+
+    .navbar-container {
+        flex-wrap: wrap; /* Allow menu to wrap below brand and toggle */
+    }
+
+    /* Hide the menu by default, show when active */
+    .nav-menu {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+        margin-top: 1rem;
+        border-top: 1px solid rgba(0,0,0,0.05);
+        padding-top: 0.5rem;
+    }
+
+    .nav-menu.active {
+        display: flex;
+    }
+
+    .nav-menu li {
+        width: 100%;
+    }
+
+    .nav-link {
+        display: block;
+        padding: 0.75rem 0.5rem;
+        width: 100%;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    
+    .nav-link:hover {
+        background-color: rgba(2, 132, 199, 0.05);
+    }
+
+    /* Hide user info or reformat it */
+    .user-info {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    /* Layout split override for iPad and mobile */
+    .layout-split {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    /* Sticky sidebar override for iPad and mobile */
+    .sticky-sidebar-mobile {
+        position: static !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Container & Layout */
+    body {
+        padding: 0;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+
+    .card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Typography */
+    h1.page-title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Forms */
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-col {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    /* Dashboard Stats Grid */
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* Room Grid */
+    .room-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }

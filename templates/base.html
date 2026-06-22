@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hệ thống Quản lý Bất động sản{% endblock %}</title>
     <!-- CSS Tùy chỉnh -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.1">
     <!-- Biểu tượng Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -19,7 +19,11 @@
                 <span>Bất Động Sản Đăng Vy</span>
             </a>
             
-            <ul class="nav-menu">
+            <button class="menu-toggle" id="mobile-menu-btn">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <ul class="nav-menu" id="nav-menu">
                 {% if session.get('role_id') == 3 %}
                     <!-- Vai trò Sale -->
                     <li><a href="{{ url_for('sale_dashboard') }}" class="nav-link {% if request.path == url_for('sale_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-simple"></i> Dashboard</a></li>
@@ -41,21 +45,26 @@
                     <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho vật tư</a></li>
                     <li><a href="{{ url_for('admin_employees') }}" class="nav-link {% if request.path == url_for('admin_employees') %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Nhân sự</a></li>
                 {% endif %}
-            </ul>
 
-            <div class="user-info user-highlight">
-                <span class="user-name"><i class="fa-regular fa-user"></i> {{ session.get('fullname') }}</span>
-                {% if session.get('role_id') == 1 %}
-                    <span class="user-role role-admin">Admin</span>
-                {% elif session.get('role_id') == 2 %}
-                    <span class="user-role role-manager">Vận hành</span>
-                {% elif session.get('role_id') == 3 %}
-                    <span class="user-role role-sale">Sale</span>
-                {% endif %}
-                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" style="margin-left: 0.5rem;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</a>
-            </div>
+                <div class="user-info user-highlight" style="margin-left: auto;">
+                    <span class="user-name"><i class="fa-regular fa-user"></i> {{ session.get('fullname') }}</span>
+                    {% if session.get('role_id') == 1 %}
+                        <span class="user-role role-admin">Admin</span>
+                    {% elif session.get('role_id') == 2 %}
+                        <span class="user-role role-manager">Vận hành</span>
+                    {% elif session.get('role_id') == 3 %}
+                        <span class="user-role role-sale">Sale</span>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" style="margin-left: 0.5rem;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</a>
+                </div>
+            </ul>
         </div>
     </nav>
+    <script>
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            document.getElementById('nav-menu').classList.toggle('active');
+        });
+    </script>
     {% endif %}
 
     <main class="container">

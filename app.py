@@ -115,9 +115,8 @@ def check_contract_activation():
                    (SELECT TongTien FROM HOA_DON WHERE MaHopDong = h.MaHopDong ORDER BY MaHoaDon ASC LIMIT 1) as TongTienHoaDon,
                    (SELECT TrangThaiThanhToan FROM HOA_DON WHERE MaHopDong = h.MaHopDong ORDER BY MaHoaDon ASC LIMIT 1) as TinhTrangHoaDon
             FROM HOP_DONG h 
-            WHERE h.TrangThai = 'Giữ phòng' AND h.NgayBatDau <= ?
-            """,
-            (today_str,)
+            WHERE h.TrangThai = 'Giữ phòng'
+            """
         ).fetchall()
         if contracts:
             for c in contracts:
@@ -442,8 +441,8 @@ def sale_chot_coc(room_id):
             # Tiền dịch vụ lẻ ngày (trong DB lưu là nghìn đồng, nên chia 1000)
             tien_dich_vu_le = (((gia_dv * so_nguoi) / 1000.0) / 30.0) * actual_days
             
-            # Tổng tiền lẻ ngày hóa đơn đầu tiên = Tiền nhà lẻ + Tiền dịch vụ lẻ + Tiền cọc thực tế
-            tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + deposit_amount
+            # Tổng tiền lẻ ngày hóa đơn đầu tiên = Tiền nhà lẻ + Tiền dịch vụ lẻ + Tiền cọc thực tế (1 tháng tiền phòng)
+            tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + gia_thue
             
             # 4. Thêm bản ghi hóa đơn
             cursor.execute(
@@ -520,6 +519,7 @@ def sale_booking_edit(deal_id):
         move_in_date = request.form.get('move_in_date')
         duration = int(request.form.get('duration'))
         elec_start = int(request.form.get('elec_start'))
+        so_nguoi = int(request.form.get('so_nguoi', 1))
         notes = request.form.get('notes')
         
         try:
@@ -556,10 +556,10 @@ def sale_booking_edit(deal_id):
                 cursor.execute(
                     """
                     UPDATE HOP_DONG
-                    SET NgayBatDau = ?, NgayKetThuc = ?, ThoiHanThue = ?, TienCoc = ?, GhiChu = ?, GiaThue = ?
+                    SET NgayBatDau = ?, NgayKetThuc = ?, ThoiHanThue = ?, TienCoc = ?, GhiChu = ?, GiaThue = ?, SoNguoi = ?
                     WHERE MaHopDong = ?
                     """,
-                    (move_in_date, end_date_str, duration, deposit_amount, notes, gia_thue, deal['MaHopDong'])
+                    (move_in_date, end_date_str, duration, deposit_amount, notes, gia_thue, so_nguoi, deal['MaHopDong'])
                 )
                 
             # Tính toán lại hóa đơn đầu tiên (nếu chưa thanh toán)
@@ -598,8 +598,8 @@ def sale_booking_edit(deal_id):
                     gia_dien = config['GiaDien']
                     gia_dv = config['GiaDichVu']
                     
-                tien_dich_vu_le = ((gia_dv / 1000.0) / 30.0) * actual_days
-                tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + deposit_amount
+                tien_dich_vu_le = (((gia_dv * so_nguoi) / 1000.0) / 30.0) * actual_days
+                tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + gia_thue
                 
                 cursor.execute(
                     """
@@ -624,7 +624,7 @@ def sale_booking_edit(deal_id):
     config = db.execute("SELECT * FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
     gia_dv = config['GiaDichVu'] / 1000.0 if config else 250.0
     db.close()
-    return render_template('sale_booking_edit.html', deal=deal, room=room, gia_dv=gia_dv)
+    return render_template('sale_booking_edit.html', deal=deal, room=room, gia_dv=gia_dv, contract=contract)
 
 
 # ==========================================
@@ -1577,6 +1577,7 @@ def shared_contract_edit(contract_id):
         duration = request.form.get('duration')
         rent_price = request.form.get('rent_price')
         deposit = request.form.get('deposit')
+        so_nguoi = int(request.form.get('so_nguoi', 1))
         notes = request.form.get('notes')
         
         # Update KHACH_THUE
@@ -1593,10 +1594,10 @@ def shared_contract_edit(contract_id):
         db.execute(
             """
             UPDATE HOP_DONG 
-            SET NgayBatDau = ?, NgayKetThuc = ?, ThoiHanThue = ?, GiaThue = ?, TienCoc = ?, GhiChu = ? 
+            SET NgayBatDau = ?, NgayKetThuc = ?, ThoiHanThue = ?, GiaThue = ?, TienCoc = ?, GhiChu = ?, SoNguoi = ? 
             WHERE MaHopDong = ?
             """,
-            (start_date, end_date, duration, rent_price, deposit, notes, contract_id)
+            (start_date, end_date, duration, rent_price, deposit, notes, so_nguoi, contract_id)
         )
         
         db.commit()
