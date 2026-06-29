@@ -24,6 +24,12 @@
                 <input type="number" step="0.01" id="service_price" name="service_price" class="form-control" placeholder="Ví dụ: 250000.00..." required>
                 <small style="color: var(--text-muted);">Đơn giá phí dịch vụ phòng cố định cộng thêm mỗi tháng.</small>
             </div>
+            
+            <div class="form-group">
+                <label for="chi_tieu_kpi" class="form-label">Chỉ tiêu KPI tối thiểu (Phòng/Tháng) *</label>
+                <input type="number" id="chi_tieu_kpi" name="chi_tieu_kpi" class="form-control" placeholder="Ví dụ: 6" required>
+                <small style="color: var(--text-muted);">Số lượng phòng Sale cần chốt để đạt thưởng lương cứng.</small>
+            </div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
                 <i class="fa-solid fa-square-poll-horizontal"></i> Áp dụng biểu giá mới
@@ -40,6 +46,7 @@
                     <tr>
                         <th>Giá điện</th>
                         <th>Giá dịch vụ</th>
+                        <th>Chỉ tiêu KPI</th>
                         <th>Ngày áp dụng</th>
                         <th style="text-align: center;">Trạng thái</th>
                     </tr>
@@ -48,8 +55,9 @@
                     {% if configs %}
                         {% for c in configs %}
                         <tr {% if c.TrangThai == 1 %}style="background: rgba(16, 185, 129, 0.05); font-weight: 600;"{% endif %}>
-                            <td style="color: #fff;">{{ "{:,.2f}".format(c.GiaDien) }} đ</td>
-                            <td style="color: #fff;">{{ "{:,.2f}".format(c.GiaDichVu) }} đ</td>
+                            <td>{{ "{:,.0f}".format(c.GiaDien) }} đ</td>
+                            <td>{{ "{:,.0f}".format(c.GiaDichVu) }} đ</td>
+                            <td>{{ c.ChiTieuKPI if c.ChiTieuKPI else 0 }} phòng</td>
                             <td>{{ c.NgayApDung }}</td>
                             <td style="text-align: center;">
                                 {% if c.TrangThai == 1 %}

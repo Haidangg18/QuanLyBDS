@@ -9,7 +9,7 @@
 </div>
 
 <!-- Hệ thống Tab điều hướng -->
-<div class="card" style="padding: 0.5rem; margin-bottom: 1.5rem;">
+<div class="card" style="padding: 0.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
     <div style="display: flex; gap: 0.5rem;">
         <button class="btn tab-btn active" id="tab-rooms-btn" onclick="switchTab('rooms')">
             <i class="fa-solid fa-house-chimney-user"></i> Danh Sách Phòng Trống
@@ -17,6 +17,28 @@
         <button class="btn tab-btn" id="tab-bookings-btn" onclick="switchTab('bookings')">
             <i class="fa-solid fa-handshake"></i> Tổng Hợp Phòng Chốt
         </button>
+        <button class="btn tab-btn" id="tab-salary-btn" onclick="switchTab('salary')">
+            <i class="fa-solid fa-money-check-dollar"></i> Thống kê Lương / KPI
+        </button>
+    </div>
+    
+    <!-- Bộ lọc thời gian dùng chung được đưa lên góc phải tab bar -->
+    <div id="tab-global-filter" style="display: none; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.3rem 0.6rem; border-radius: 8px;">
+        <span style="font-weight: 600; font-size: 0.85rem;"><i class="fa-solid fa-calendar-days"></i> Xem tháng:</span>
+        <form id="global-filter-form" action="{{ url_for('shared_tracking') }}" method="GET" style="display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0;">
+            <select name="month" class="form-control" style="width: auto; padding: 0.2rem 0.4rem; height: auto; font-size: 0.85rem;">
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>Tháng {{ m }}</option>
+                {% endfor %}
+            </select>
+            <select name="year" class="form-control" style="width: auto; padding: 0.2rem 0.4rem; height: auto; font-size: 0.85rem;">
+                {% for y in range(2023, 2030) %}
+                    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>Năm {{ y }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="tab" id="filter-active-tab" value="bookings">
+            <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.85rem;">Xem</button>
+        </form>
     </div>
 </div>
 
@@ -125,10 +147,11 @@
 
 <!-- Tab 2: Tổng hợp phòng chốt -->
 <div class="tab-content" id="tab-bookings" style="display: none;">
+
     <!-- Bảng phòng chốt -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
-            <h3 style="color: var(--accent); margin: 0;"><i class="fa-solid fa-handshake"></i> Tổng hợp phòng chốt trong tháng</h3>
+            <h3 style="color: var(--accent); margin: 0;"><i class="fa-solid fa-list"></i> Danh sách các giao dịch chốt phòng trong tháng</h3>
             <span class="badge badge-datcoc" style="font-size: 0.9rem;">Tổng số lượt chốt: {{ bookings|length }} lượt</span>
         </div>
         <div class="table-responsive">
@@ -203,6 +226,93 @@
         </div>
     </div>
 </div>
+
+<!-- Tab 3: Thống kê lương / KPI -->
+<div class="tab-content" id="tab-salary" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+        {% if session.get('role_id') in [1, 2] %}
+        <!-- Form cập nhật KPI cho Admin & Manager -->
+        <div style="display: inline-flex; align-items: center; gap: 0.8rem; background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.2); padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0;">
+            <form action="{{ url_for('admin_update_kpi') }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0;">
+                <label for="chi_tieu_kpi" style="font-weight: 600; white-space: nowrap; margin-bottom: 0;"><i class="fa-solid fa-gear"></i> Set KPI phòng cho sale:</label>
+                <input type="number" name="chi_tieu_kpi" id="chi_tieu_kpi" class="form-control" style="width: 70px; padding: 0.25rem 0.5rem; height: auto;" value="{{ chi_tieu_kpi }}" min="0" required>
+                <span style="white-space: nowrap;">phòng/tháng</span>
+                <input type="hidden" name="return_tab" value="salary">
+                <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.3rem 0.75rem;">Cập nhật</button>
+            </form>
+        </div>
+        {% endif %}
+        
+        {% if session.get('role_id') == 3 and current_sale_stat %}
+        <!-- Tiến độ KPI siêu gọn cho Sale (Ngang hàng) -->
+        <div style="display: inline-flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, rgba(99,102,241,0.05), rgba(6,182,212,0.05)); border: 1px solid rgba(99,102,241,0.2); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; max-width: 500px; flex: 1; margin-bottom: 0;">
+            <span style="font-weight: 600; color: var(--accent); white-space: nowrap;"><i class="fa-solid fa-bullseye"></i> KPI: {{ current_sale_stat.SoPhongChot }}/{{ chi_tieu_kpi }} phòng</span>
+            <div style="width: 100px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; display: inline-block;">
+                {% set kpi_percent = (current_sale_stat.SoPhongChot / chi_tieu_kpi * 100) if chi_tieu_kpi > 0 else 100 %}
+                {% if kpi_percent > 100 %}{% set kpi_percent = 100 %}{% endif %}
+                <div style="width: {{ kpi_percent }}%; height: 100%; background: {% if current_sale_stat.DatKPI %}var(--success){% else %}var(--accent){% endif %};"></div>
+            </div>
+            <span style="font-weight: 600; white-space: nowrap;">
+                {% if current_sale_stat.DatKPI %}
+                    <span style="color: var(--success);"><i class="fa-solid fa-award"></i> Đạt KPI (Thưởng: {{ "{:,.0f}".format(current_sale_stat.LuongCung * 1000)|replace(',', '.') }}đ)</span>
+                {% else %}
+                    <span style="color: var(--danger);"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - current_sale_stat.SoPhongChot }} phòng để có {{ "{:,.0f}".format(current_sale_stat.LuongCung * 1000)|replace(',', '.') }}đ</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card" style="margin-bottom: 1rem;">
+        <h3 style="color: var(--success); margin-bottom: 1rem;"><i class="fa-solid fa-money-check-dollar"></i> Bảng Lương Sale chi tiết (Tháng {{ current_month }}/{{ current_year }})</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tên Nhân Viên Sale</th>
+                        <th style="text-align: center;">Phòng Đã Chốt</th>
+                        <th style="text-align: center;">Trạng Thái KPI</th>
+                        <th style="text-align: right;">Hoa Hồng Nhận Được</th>
+                        <th style="text-align: right;">Lương Cứng (Nếu Đạt)</th>
+                        <th style="text-align: right;">Tổng Thu Nhập</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if salary_summary %}
+                        {% for s in salary_summary %}
+                        <tr {% if session.get('fullname') == s.HoTen %}style="background: rgba(16, 185, 129, 0.1); font-weight: 600;"{% endif %}>
+                            <td><strong>{{ s.HoTen }}</strong></td>
+                            <td style="text-align: center;">
+                                <span class="badge {% if s.DatKPI %}badge-trong{% else %}badge-chuathanhtoan{% endif %}">{{ s.SoPhongChot }} phòng</span>
+                            </td>
+                            <td style="text-align: center;">
+                                {% if s.DatKPI %}
+                                    <span style="color: var(--success); font-weight: 600;"><i class="fa-solid fa-check-circle"></i> Đạt</span>
+                                {% else %}
+                                    <span style="color: var(--danger);"><i class="fa-solid fa-xmark-circle"></i> Thiếu {{ chi_tieu_kpi - s.SoPhongChot }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; color: var(--success); font-weight: 600;">{{ "{:,.0f}".format(s.HoaHong * 1000)|replace(',', '.') }}đ</td>
+                            <td style="text-align: right; color: var(--text-secondary);">
+                                {% if s.DatKPI %}
+                                    <span style="color: var(--accent); font-weight: 600;">+{{ "{:,.0f}".format(s.LuongCung * 1000)|replace(',', '.') }}đ</span>
+                                {% else %}
+                                    <span style="text-decoration: line-through;">{{ "{:,.0f}".format(s.LuongCung * 1000)|replace(',', '.') }}đ</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; font-weight: 700; color: var(--danger); font-size: 1.1rem;">{{ "{:,.0f}".format(s.TongLuong * 1000)|replace(',', '.') }}đ</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Chưa có dữ liệu chốt phòng trong tháng này.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -211,14 +321,24 @@ function switchTab(tabId) {
     // Ẩn tất cả các tab
     document.getElementById('tab-rooms').style.display = 'none';
     document.getElementById('tab-bookings').style.display = 'none';
+    document.getElementById('tab-salary').style.display = 'none';
     
     // Loại bỏ class active khỏi các nút
     document.getElementById('tab-rooms-btn').classList.remove('active');
     document.getElementById('tab-bookings-btn').classList.remove('active');
+    document.getElementById('tab-salary-btn').classList.remove('active');
     
-    // Hiển thị tab được chọn
+    // Hiện tab được chọn
     document.getElementById('tab-' + tabId).style.display = 'block';
     document.getElementById('tab-' + tabId + '-btn').classList.add('active');
+    
+    // Cập nhật active tab vào form lọc và ẩn/hiện bộ lọc cho phù hợp
+    if (tabId === 'rooms') {
+        document.getElementById('tab-global-filter').style.display = 'none';
+    } else {
+        document.getElementById('tab-global-filter').style.display = 'inline-flex';
+        document.getElementById('filter-active-tab').value = tabId;
+    }
 }
 
 function filterRooms() {
@@ -239,6 +359,17 @@ function filterRooms() {
         } else {
             row.style.display = 'none';
         }
+    }
+}
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab === 'salary') {
+        switchTab('salary');
+    } else if (tab === 'bookings') {
+        switchTab('bookings');
+    } else {
+        switchTab('rooms');
     }
 }
 </script>

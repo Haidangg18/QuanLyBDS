@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Chi Phí - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title"><i class="fa-solid fa-file-invoice-dollar"></i> Quản Lý Chi Phí</h1>
+    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+</div>
+
+<div class="layout-split" style="grid-template-columns: 1fr 1fr;">
+    <!-- Cột trái: Danh sách chi phí -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0;"><i class="fa-solid fa-list"></i> Bảng kê chi phí Tháng {{ current_month }}/{{ current_year }}</h3>
+            <form action="{{ url_for('manager_expenses') }}" method="GET" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select name="month" class="form-control" style="width: auto; display: inline-block;">
+                    {% for m in range(1, 13) %}
+                        <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>Tháng {{ m }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" class="form-control" style="width: auto; display: inline-block;">
+                    {% for y in range(2023, 2030) %}
+                        <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>Năm {{ y }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-secondary">Lọc</button>
+            </form>
+        </div>
+        
+        <div style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--danger);">
+            <span style="font-weight: 500; color: var(--danger);">Tổng chi phí trong tháng:</span>
+            <span style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">{{ "{:,.0f}".format(total_expenses) }} đ</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ngày Nhập</th>
+                        <th>Tên Chi Phí</th>
+                        <th style="text-align: right;">Số Tiền</th>
+                        <th>Người Nhập</th>
+                        <th style="text-align: center;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if expenses %}
+                        {% for item in expenses %}
+                        <tr>
+                            <td>{{ item.NgayNhap }}</td>
+                            <td>
+                                <strong>{{ item.TenChiPhi }}</strong>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ item.GhiChu }}</div>
+                            </td>
+                            <td style="text-align: right; font-weight: 700; color: var(--danger);">
+                                -{{ "{:,.0f}".format(item.SoTien) }} đ
+                            </td>
+                            <td>{{ item.NguoiNhap }}</td>
+                            <td style="text-align: center;">
+                                <form action="{{ url_for('manager_expense_delete', expense_id=item.MaChiPhi) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khoản chi phí này?');">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Xóa">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không phát sinh khoản chi phí nào trong tháng.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cột phải: Form nhập chi phí -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-plus-circle"></i> Thêm Khoản Chi Phí Mới</h3>
+        <form action="{{ url_for('manager_expenses') }}" method="POST">
+            <div class="form-group">
+                <label for="ten_chi_phi" class="form-label">Tên khoản chi phí *</label>
+                <input type="text" id="ten_chi_phi" name="ten_chi_phi" class="form-control" placeholder="Ví dụ: Sửa điều hòa phòng 201..." required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-col form-group">
+                    <label for="so_tien" class="form-label">Số tiền (VNĐ) *</label>
+                    <input type="text" id="so_tien" name="so_tien" class="form-control number-format" placeholder="Nhập số tiền..." required>
+                </div>
+                <div class="form-col form-group">
+                    <label for="ngay_nhap" class="form-label">Ngày ghi nhận *</label>
+                    <input type="date" id="ngay_nhap" name="ngay_nhap" class="form-control" value="{{ current_year }}-{{ '%02d' | format(current_month) }}-{{ '%02d' | format(request.args.get('day', 1)|int) }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ghi_chu" class="form-label">Ghi chú thêm</label>
+                <textarea id="ghi_chu" name="ghi_chu" class="form-control" rows="3" placeholder="Ghi chú thêm (nếu có)..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-square-plus"></i> Xác nhận Lưu Chi Phí
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Định dạng số tiền có dấu phẩy
+    const numberInputs = document.querySelectorAll('.number-format');
+    numberInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            let value = this.value.replace(/,/g, '');
+            if(value && !isNaN(value)) {
+                this.value = parseInt(value).toLocaleString('en-US');
+            } else {
+                this.value = '';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -31,13 +31,19 @@
             <input type="tel" id="phone" name="phone" class="form-control" value="{{ user.SoDienThoai if user.SoDienThoai else '' }}">
         </div>
 
-        <div class="form-group">
-            <label for="role_id" class="form-label">Vai trò hệ thống *</label>
-            <select id="role_id" name="role_id" class="form-control" required>
-                <option value="1" {% if user.MaVaiTro == 1 %}selected{% endif %}>Chủ doanh nghiệp / Admin</option>
-                <option value="2" {% if user.MaVaiTro == 2 %}selected{% endif %}>Nhân viên quản lý / Vận hành</option>
-                <option value="3" {% if user.MaVaiTro == 3 %}selected{% endif %}>Cộng tác viên / Sale (Môi giới)</option>
-            </select>
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="role_id" class="form-label">Vai trò hệ thống *</label>
+                <select id="role_id" name="role_id" class="form-control" required>
+                    <option value="1" {% if user.MaVaiTro == 1 %}selected{% endif %}>Chủ doanh nghiệp / Admin</option>
+                    <option value="2" {% if user.MaVaiTro == 2 %}selected{% endif %}>Nhân viên quản lý / Vận hành</option>
+                    <option value="3" {% if user.MaVaiTro == 3 %}selected{% endif %}>Cộng tác viên / Sale (Môi giới)</option>
+                </select>
+            </div>
+            <div class="form-col form-group">
+                <label for="luong_cung" class="form-label">Lương cứng (VND)</label>
+                <input type="number" id="luong_cung" name="luong_cung" class="form-control" placeholder="Ví dụ: 5000000" min="0" value="{{ '{:.0f}'.format(user.LuongCung) if user.LuongCung else '0' }}">
+            </div>
         </div>
 
         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">

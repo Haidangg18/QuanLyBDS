@@ -261,6 +261,29 @@ def sale_dashboard():
         "SELECT DISTINCT KhuVuc FROM TAI_SAN WHERE TrangThai = 'Trong' ORDER BY KhuVuc"
     ).fetchall()]
     
+    # KPI logic for current month
+    config = db.execute("SELECT ChiTieuKPI FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
+    chi_tieu_kpi = config['ChiTieuKPI'] if config else 6
+    
+    current_month = date.today().month
+    current_year = date.today().year
+    start_date = f"{current_year}-{current_month:02d}-01"
+    if current_month == 12:
+        end_date = f"{current_year+1}-01-01"
+    else:
+        end_date = f"{current_year}-{current_month+1:02d}-01"
+        
+    my_deals_this_month = db.execute(
+        """
+        SELECT COUNT(*) FROM THONG_TIN_CHOT_KHACH 
+        WHERE MaTaiKhoanChot = ? AND NgayChot >= ? AND NgayChot < ?
+        """, (user_id, start_date, end_date)
+    ).fetchone()[0]
+    
+    sale_info = db.execute("SELECT LuongCung FROM TAI_KHOAN WHERE MaTaiKhoan = ?", (user_id,)).fetchone()
+    luong_cung = float(sale_info['LuongCung'] if sale_info and sale_info['LuongCung'] else 0.0)
+    dat_kpi = my_deals_this_month >= chi_tieu_kpi
+    
     db.close()
     
     current_date = date.today().strftime('%d/%m/%Y')
@@ -272,64 +295,17 @@ def sale_dashboard():
         bookings=bookings,
         empty_rooms=empty_rooms,
         areas=areas,
-        current_date=current_date
+        current_date=current_date,
+        chi_tieu_kpi=chi_tieu_kpi,
+        my_deals_this_month=my_deals_this_month,
+        luong_cung=luong_cung,
+        dat_kpi=dat_kpi,
+        current_month=current_month,
+        current_year=current_year
     )
 
 
-@app.route('/sale/bookings')
-@role_required([3])
-def sale_bookings():
-    user_id = session['user_id']
-    db = get_db()
-    
-    # 1. Phiếu chốt đang giữ phòng (hợp đồng có trạng thái 'Giữ phòng') của Sale này
-    my_bookings = db.execute(
-        """
-        SELECT tk.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, ts.GiaThue, ts.HoaHong as HoaHongTaiSan, hd.NgayBatDau, hd.TrangThai as TrangThaiHopDong
-        FROM THONG_TIN_CHOT_KHACH tk
-        JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan
-        JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
-        WHERE tk.MaTaiKhoanChot = ? AND hd.TrangThai = 'Giữ phòng'
-        ORDER BY tk.MaChotKhach DESC
-        """, (user_id,)
-    ).fetchall()
-    
-    # 2. Hợp đồng đã hiệu lực của Sale này (hợp đồng có trạng thái khác 'Giữ phòng')
-    my_contracts = db.execute(
-        """
-        SELECT hd.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, kt.HoTen as TenKhach, kt.SoDienThoai
-        FROM HOP_DONG hd
-        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
-        JOIN KHACH_THUE kt ON hd.MaKhachThue = kt.MaKhachThue
-        JOIN THONG_TIN_CHOT_KHACH tk ON hd.MaHopDong = tk.MaHopDong
-        WHERE tk.MaTaiKhoanChot = ? AND hd.TrangThai != 'Giữ phòng'
-        ORDER BY hd.MaHopDong DESC
-        """, (user_id,)
-    ).fetchall()
-    
-    # 3. Khách thuê của bản thân Sale này
-    my_tenants = db.execute(
-        """
-        SELECT DISTINCT kt.*, ts.SoPhong, ts.DiaChi as DiaChiRoom, hd.MaHopDong, hd.TrangThai as TrangThaiHopDong
-        FROM KHACH_THUE kt
-        JOIN HOP_DONG hd ON kt.MaKhachThue = hd.MaKhachThue
-        JOIN THONG_TIN_CHOT_KHACH tk ON hd.MaHopDong = tk.MaHopDong
-        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
-        WHERE tk.MaTaiKhoanChot = ?
-        ORDER BY kt.MaKhachThue DESC
-        """, (user_id,)
-    ).fetchall()
-    
-    db.close()
-    current_date = date.today().strftime('%d/%m/%Y')
-    
-    return render_template(
-        'sale_bookings.html',
-        bookings=my_bookings,
-        contracts=my_contracts,
-        tenants=my_tenants,
-        current_date=current_date
-    )
+
 
 @app.route('/sale/search')
 @role_required([3])
@@ -631,10 +607,7 @@ def sale_booking_edit(deal_id):
 # PHÂN HỆ DÀNH CHO NHÂN VIÊN VẬN HÀNH (ROLE = 2)
 # ==========================================
 
-@app.route('/manager/dashboard')
-@role_required([2])
-def manager_dashboard():
-    return redirect(url_for('shared_tracking'))
+
 
 @app.route('/manager/ca-thu')
 @role_required([2])
@@ -1021,6 +994,62 @@ def manager_kho():
     
     return render_template('manager_kho.html', items=items, rooms=rooms)
 
+@app.route('/manager/expenses', methods=['GET', 'POST'])
+@role_required([1, 2])
+def manager_expenses():
+    db = get_db()
+    current_month = int(request.args.get('month', date.today().month))
+    current_year = int(request.args.get('year', date.today().year))
+    
+    if request.method == 'POST':
+        ten_chi_phi = request.form.get('ten_chi_phi')
+        so_tien = float(request.form.get('so_tien').replace(',', ''))
+        ngay_nhap = request.form.get('ngay_nhap', date.today().isoformat())
+        ghi_chu = request.form.get('ghi_chu')
+        thang = int(ngay_nhap.split('-')[1])
+        nam = int(ngay_nhap.split('-')[0])
+        ma_tai_khoan = session.get('user_id')
+        
+        try:
+            db.execute(
+                """
+                INSERT INTO CHI_PHI (Thang, Nam, TenChiPhi, SoTien, NgayNhap, MaTaiKhoanNhap, GhiChu)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (thang, nam, ten_chi_phi, so_tien, ngay_nhap, ma_tai_khoan, ghi_chu)
+            )
+            db.commit()
+            flash("Thêm khoản chi phí thành công!", "success")
+        except Exception as e:
+            db.rollback()
+            flash(f"Lỗi thêm chi phí: {str(e)}", "error")
+            
+        return redirect(url_for('manager_expenses', month=current_month, year=current_year))
+        
+    expenses = db.execute(
+        """
+        SELECT c.*, t.HoTen as NguoiNhap 
+        FROM CHI_PHI c 
+        JOIN TAI_KHOAN t ON c.MaTaiKhoanNhap = t.MaTaiKhoan
+        WHERE c.Thang = ? AND c.Nam = ?
+        ORDER BY c.NgayNhap DESC, c.MaChiPhi DESC
+        """, (current_month, current_year)
+    ).fetchall()
+    
+    total_expenses = sum(e['SoTien'] for e in expenses)
+    db.close()
+    
+    return render_template('manager_expenses.html', expenses=expenses, current_month=current_month, current_year=current_year, total_expenses=total_expenses)
+
+@app.route('/manager/expenses/delete/<int:expense_id>', methods=['POST'])
+@role_required([1, 2])
+def manager_expense_delete(expense_id):
+    db = get_db()
+    db.execute("DELETE FROM CHI_PHI WHERE MaChiPhi = ?", (expense_id,))
+    db.commit()
+    db.close()
+    flash("Đã xóa khoản chi phí!", "success")
+    return redirect(request.referrer or url_for('manager_expenses'))
 
 # ==========================================
 # PHÂN HỆ DÀNH CHO ADMIN (ROLE = 1)
@@ -1031,34 +1060,53 @@ def manager_kho():
 def admin_dashboard():
     db = get_db()
     
-    # Lấy dữ liệu tài chính theo tháng (Tối đa 12 tháng gần nhất)
     monthly_rows = db.execute("""
         SELECT Nam, Thang, 
                SUM(CASE WHEN TrangThaiThanhToan = 'Đã thanh toán' THEN TongTien ELSE 0 END) as Revenue,
                SUM(CASE WHEN TrangThaiThanhToan = 'Chưa thanh toán' THEN TongTien ELSE 0 END) as Debt
         FROM HOA_DON
         GROUP BY Nam, Thang
-        ORDER BY Nam ASC, Thang ASC
-        LIMIT 12
     """).fetchall()
+    
+    expense_rows = db.execute("""
+        SELECT Nam, Thang, SUM(SoTien) as Expense
+        FROM CHI_PHI
+        GROUP BY Nam, Thang
+    """).fetchall()
+    
+    monthly_data = {}
+    for r in monthly_rows:
+        key = f"{r['Nam']}-{r['Thang']}"
+        monthly_data[key] = {'Nam': r['Nam'], 'Thang': r['Thang'], 'Revenue': r['Revenue'], 'Debt': r['Debt'], 'Expense': 0}
+        
+    for r in expense_rows:
+        key = f"{r['Nam']}-{r['Thang']}"
+        if key not in monthly_data:
+            monthly_data[key] = {'Nam': r['Nam'], 'Thang': r['Thang'], 'Revenue': 0, 'Debt': 0, 'Expense': r['Expense']}
+        else:
+            monthly_data[key]['Expense'] = r['Expense']
+            
+    # Sort and Limit to last 12
+    sorted_months = sorted(monthly_data.values(), key=lambda x: (x['Nam'], x['Thang']))[-12:]
     
     chart_labels = []
     chart_revenue = []
     chart_debt = []
+    chart_expenses = []
     
     total_revenue = 0.0
     total_debt = 0.0
+    total_expenses = 0.0
     
-    # Tính toán số thực tế cho các thẻ thống kê tổng
-    for row in monthly_rows:
+    for row in sorted_months:
         total_revenue += row['Revenue']
         total_debt += row['Debt']
+        total_expenses += row['Expense']
         
-    # Chế thêm số liệu các tháng trước nếu ít dữ liệu (để biểu đồ đẹp hơn, đủ 6 tháng)
     import datetime
     import random
     
-    needed_mock_months = 6 - len(monthly_rows)
+    needed_mock_months = 6 - len(sorted_months)
     if needed_mock_months > 0:
         now = datetime.datetime.now()
         for i in range(needed_mock_months, 0, -1):
@@ -1068,14 +1116,17 @@ def admin_dashboard():
                 m += 12
                 y -= 1
             chart_labels.append(f"T{m}/{y}")
-            chart_revenue.append(random.randint(60, 150) * 1000000)  # Doanh thu 60M - 150M
-            chart_debt.append(random.randint(2, 15) * 1000000)     # Nợ 2M - 15M
+            chart_revenue.append(random.randint(60, 150) * 1000000)
+            chart_debt.append(random.randint(2, 15) * 1000000)
+            chart_expenses.append(random.randint(10, 40) * 1000000)
             
-    # Gắn số liệu thực tế của các tháng có trong CSDL vào cuối biểu đồ
-    for row in monthly_rows:
+    for row in sorted_months:
         chart_labels.append(f"T{row['Thang']}/{row['Nam']}")
         chart_revenue.append(row['Revenue'])
         chart_debt.append(row['Debt'])
+        chart_expenses.append(row['Expense'])
+        
+    total_profit = total_revenue - total_expenses
         
     # Khối 3: Thống kê số lượng phòng theo trạng thái
     rooms = db.execute("SELECT TrangThai, COUNT(*) as count FROM TAI_SAN GROUP BY TrangThai").fetchall()
@@ -1089,11 +1140,14 @@ def admin_dashboard():
     return render_template(
         'admin_dashboard.html', 
         total_revenue=total_revenue, 
-        total_debt=total_debt, 
+        total_debt=total_debt,
+        total_expenses=total_expenses,
+        total_profit=total_profit,
         room_stats=room_stats,
         chart_labels=chart_labels,
         chart_revenue=chart_revenue,
-        chart_debt=chart_debt
+        chart_debt=chart_debt,
+        chart_expenses=chart_expenses
     )
 
 @app.route('/admin/employees', methods=['GET', 'POST'])
@@ -1107,6 +1161,7 @@ def admin_employees():
         fullname = request.form.get('fullname')
         phone = request.form.get('phone')
         role_id = int(request.form.get('role_id'))
+        luong_cung = float(request.form.get('luong_cung', 0))
         
         # Kiểm tra trùng tên đăng nhập
         check_user = db.execute("SELECT * FROM TAI_KHOAN WHERE TenDangNhap = ?", (username,)).fetchone()
@@ -1116,10 +1171,10 @@ def admin_employees():
             try:
                 db.execute(
                     """
-                    INSERT INTO TAI_KHOAN (TenDangNhap, MatKhau, HoTen, SoDienThoai, MaVaiTro, TrangThai)
-                    VALUES (?, ?, ?, ?, ?, 1)
+                    INSERT INTO TAI_KHOAN (TenDangNhap, MatKhau, HoTen, SoDienThoai, MaVaiTro, TrangThai, LuongCung)
+                    VALUES (?, ?, ?, ?, ?, 1, ?)
                     """,
-                    (username, password, fullname, phone, role_id)
+                    (username, password, fullname, phone, role_id, luong_cung)
                 )
                 db.commit()
                 flash(f"Tạo tài khoản thành công cho {fullname}!", "success")
@@ -1173,6 +1228,7 @@ def admin_employees_edit(user_id):
         fullname = request.form.get('fullname')
         phone = request.form.get('phone')
         role_id = int(request.form.get('role_id'))
+        luong_cung = float(request.form.get('luong_cung', 0))
         
         # Kiểm tra trùng tên đăng nhập
         check_user = db.execute(
@@ -1186,10 +1242,10 @@ def admin_employees_edit(user_id):
                 db.execute(
                     """
                     UPDATE TAI_KHOAN 
-                    SET TenDangNhap = ?, MatKhau = ?, HoTen = ?, SoDienThoai = ?, MaVaiTro = ?
+                    SET TenDangNhap = ?, MatKhau = ?, HoTen = ?, SoDienThoai = ?, MaVaiTro = ?, LuongCung = ?
                     WHERE MaTaiKhoan = ?
                     """,
-                    (username, password, fullname, phone, role_id, user_id)
+                    (username, password, fullname, phone, role_id, luong_cung, user_id)
                 )
                 db.commit()
                 # Cập nhật session nếu tự sửa chính mình
@@ -1215,6 +1271,7 @@ def admin_config():
     if request.method == 'POST':
         elec_price = float(request.form.get('elec_price'))
         service_price = float(request.form.get('service_price'))
+        chi_tieu_kpi = int(request.form.get('chi_tieu_kpi', 6))
         
         try:
             # 1. Chuyển toàn bộ cấu hình cũ về TrangThai = 0
@@ -1223,10 +1280,10 @@ def admin_config():
             # 2. Thêm cấu hình mới với TrangThai = 1
             db.execute(
                 """
-                INSERT INTO CAU_HINH_GIA (GiaDien, GiaDichVu, NgayApDung, TrangThai)
-                VALUES (?, ?, ?, 1)
+                INSERT INTO CAU_HINH_GIA (GiaDien, GiaDichVu, NgayApDung, TrangThai, ChiTieuKPI)
+                VALUES (?, ?, ?, 1, ?)
                 """,
-                (elec_price, service_price, date.today().isoformat())
+                (elec_price, service_price, date.today().isoformat(), chi_tieu_kpi)
             )
             db.commit()
             flash("Cập nhật biểu giá mới của hệ thống thành công!", "success")
@@ -1241,10 +1298,44 @@ def admin_config():
     db.close()
     return render_template('admin_config.html', configs=configs)
 
+@app.route('/admin/update_kpi', methods=['POST'])
+@role_required([1, 2])
+def admin_update_kpi():
+    db = get_db()
+    chi_tieu_kpi = int(request.form.get('chi_tieu_kpi', 6))
+    return_tab = request.form.get('return_tab', 'salary')
+    
+    try:
+        # Lấy cấu hình hiện hành để duplicate (vì mình chỉ muốn đổi KPI)
+        current_config = db.execute("SELECT * FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
+        
+        if current_config:
+            db.execute("UPDATE CAU_HINH_GIA SET TrangThai = 0")
+            db.execute(
+                """
+                INSERT INTO CAU_HINH_GIA (GiaDien, GiaDichVu, NgayApDung, TrangThai, ChiTieuKPI)
+                VALUES (?, ?, ?, 1, ?)
+                """,
+                (current_config['GiaDien'], current_config['GiaDichVu'], date.today().isoformat(), chi_tieu_kpi)
+            )
+            db.commit()
+            flash("Cập nhật Chỉ tiêu KPI thành công!", "success")
+        else:
+            flash("Không tìm thấy cấu hình giá hiện tại để cập nhật KPI.", "error")
+    except Exception as e:
+        db.rollback()
+        flash(f"Lỗi khi cập nhật KPI: {str(e)}", "error")
+        
+    db.close()
+    return redirect(url_for('shared_tracking', tab=return_tab))
+
 @app.route('/shared/tracking')
 @login_required
 def shared_tracking():
     db = get_db()
+    
+    current_month = int(request.args.get('month', date.today().month))
+    current_year = int(request.args.get('year', date.today().year))
     
     # Query 1: Danh sách phòng trống (trạng thái 'Trong')
     rooms = db.execute(
@@ -1257,6 +1348,13 @@ def shared_tracking():
         """
     ).fetchall()
     
+    # Lọc thời gian cho phòng chốt (Từ đầu tháng đến cuối tháng)
+    start_date = f"{current_year}-{current_month:02d}-01"
+    if current_month == 12:
+        end_date = f"{current_year+1}-01-01"
+    else:
+        end_date = f"{current_year}-{current_month+1:02d}-01"
+        
     # Query 2: Tổng hợp phòng chốt (THONG_TIN_CHOT_KHACH)
     bookings = db.execute(
         """
@@ -1267,9 +1365,59 @@ def shared_tracking():
         JOIN TAI_KHOAN u ON tk.MaTaiKhoanChot = u.MaTaiKhoan 
         LEFT JOIN KHACH_THUE kt ON tk.MaKhachThue = kt.MaKhachThue 
         LEFT JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong 
-        ORDER BY tk.MaChotKhach DESC
-        """
+        WHERE tk.NgayChot >= ? AND tk.NgayChot < ?
+        ORDER BY tk.NgayChot DESC, tk.MaChotKhach DESC
+        """, (start_date, end_date)
     ).fetchall()
+    
+    # Tính bảng lương (Summary)
+    config = db.execute("SELECT ChiTieuKPI FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
+    chi_tieu_kpi = config['ChiTieuKPI'] if config else 6
+    
+    salary_summary_dict = {}
+    sales_users = db.execute("SELECT MaTaiKhoan, HoTen, LuongCung FROM TAI_KHOAN WHERE MaVaiTro = 3").fetchall()
+    for s in sales_users:
+        salary_summary_dict[s['MaTaiKhoan']] = {
+            'HoTen': s['HoTen'],
+            'SoPhongChot': 0,
+            'HoaHong': 0.0,
+            'LuongCung': float(s['LuongCung'] if s['LuongCung'] else 0.0),
+            'TongLuong': 0.0,
+            'DatKPI': False
+        }
+        
+    for b in bookings:
+        sale_id = b['MaTaiKhoanChot']
+        if sale_id in salary_summary_dict:
+            salary_summary_dict[sale_id]['SoPhongChot'] += 1
+            salary_summary_dict[sale_id]['HoaHong'] += float(b['HoaHongTaiSan'] or 0.0)
+        
+    for sale_id, stat in salary_summary_dict.items():
+        if stat['SoPhongChot'] >= chi_tieu_kpi:
+            stat['DatKPI'] = True
+            stat['TongLuong'] = stat['HoaHong'] + stat['LuongCung']
+        else:
+            stat['DatKPI'] = False
+            stat['TongLuong'] = stat['HoaHong']
+            
+    # Sắp xếp theo tổng lương
+    salary_summary = sorted(salary_summary_dict.values(), key=lambda x: x['TongLuong'], reverse=True)
+    
+    # Lấy thông tin sale hiện tại nếu user là sale
+    current_sale_stat = None
+    if session.get('role_id') == 3:
+        if session.get('user_id') in salary_summary_dict:
+            current_sale_stat = salary_summary_dict[session.get('user_id')]
+        else:
+            sale_info = db.execute("SELECT HoTen, LuongCung FROM TAI_KHOAN WHERE MaTaiKhoan = ?", (session.get('user_id'),)).fetchone()
+            current_sale_stat = {
+                'HoTen': sale_info['HoTen'] if sale_info else 'Sale',
+                'SoPhongChot': 0,
+                'HoaHong': 0.0,
+                'LuongCung': float(sale_info['LuongCung'] if sale_info and sale_info['LuongCung'] else 0.0),
+                'TongLuong': 0.0,
+                'DatKPI': False
+            }
     
     # Lấy danh sách khu vực có trong hệ thống
     areas_query = db.execute("SELECT DISTINCT KhuVuc FROM TAI_SAN WHERE KhuVuc IS NOT NULL AND KhuVuc != ''").fetchall()
@@ -1277,7 +1425,9 @@ def shared_tracking():
     
     db.close()
     current_date = date.today().strftime('%d/%m/%Y')
-    return render_template('shared_tracking.html', rooms=rooms, bookings=bookings, current_date=current_date, areas=areas)
+    return render_template('shared_tracking.html', rooms=rooms, bookings=bookings, current_date=current_date, areas=areas,
+                           current_month=current_month, current_year=current_year, salary_summary=salary_summary, chi_tieu_kpi=chi_tieu_kpi,
+                           current_sale_stat=current_sale_stat)
 
 @app.route('/shared/room/edit/<int:room_id>', methods=['GET', 'POST'])
 @role_required([1, 2])

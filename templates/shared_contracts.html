@@ -3,9 +3,12 @@
 {% block title %}Danh sách Hợp Đồng - QL Bất Động Sản{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title"><i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> Quản Lý Danh Sách Hợp Đồng</h1>
-    <span style="font-size: 0.95rem; color: var(--text-secondary);">Tổng số hợp đồng: {{ contracts|length }} bản ghi</span>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> Quản Lý Danh Sách Hợp Đồng</h1>
+        <span style="font-size: 0.95rem; color: var(--text-secondary);">Tổng số hợp đồng: {{ contracts|length }} bản ghi</span>
+    </div>
+    <a href="{{ url_for('shared_tenants') }}" class="btn btn-primary"><i class="fa-solid fa-people-roof"></i> Danh sách Khách Thuê</a>
 </div>
 
 <div class="card">

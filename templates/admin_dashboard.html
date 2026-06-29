@@ -8,34 +8,57 @@
         <h1 class="page-title"><i class="fa-solid fa-square-poll-vertical" style="color: var(--accent);"></i> Dashboard Quản Trị Tối Cao</h1>
         <span style="font-size: 0.95rem; color: var(--text-secondary);">Thống kê tài chính vĩ mô và tỷ lệ lấp đầy tài sản</span>
     </div>
-    <a href="{{ url_for('admin_config') }}" class="btn btn-secondary btn-sm">
-        <i class="fa-solid fa-gears"></i> Cấu hình đơn giá hệ thống
-    </a>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('manager_expenses') }}" class="btn btn-warning btn-sm" style="background: var(--warning); color: #fff; border: none;">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Quản lý Chi Phí
+        </a>
+        <a href="{{ url_for('admin_config') }}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-gears"></i> Cấu hình đơn giá
+        </a>
+    </div>
 </div>
 
 <!-- Khối số liệu tài chính nhanh -->
-<div class="dashboard-grid">
-    <!-- Khối 1: Tổng số tiền doanh thu thực tế thu về -->
-    <div class="stat-card" style="border-left: 4px solid var(--success);">
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+    <!-- Khối 1: Tổng doanh thu -->
+    <div class="stat-card" style="border-left: 4px solid var(--success); padding: 1rem;">
         <div class="stat-info">
-            <span class="stat-label">Tổng doanh thu (Thực thu)</span>
-            <span class="stat-value" style="color: var(--success);">{{ "{:,.2f}".format(total_revenue) }} VND</span>
+            <span class="stat-label" style="font-size: 0.85rem;">Doanh thu (Thực thu)</span>
+            <span class="stat-value" style="color: var(--success); font-size: 1.2rem;">{{ "{:,.0f}".format(total_revenue) }} đ</span>
         </div>
-        <div class="stat-icon" style="color: var(--success);"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        <div class="stat-icon" style="color: var(--success); font-size: 1.5rem; opacity: 0.5;"><i class="fa-solid fa-hand-holding-dollar"></i></div>
     </div>
 
-    <!-- Khối 2: Tổng số tiền công nợ còn bị khách thuê nợ -->
-    <div class="stat-card" style="border-left: 4px solid var(--danger);">
+    <!-- Khối 2: Tổng chi phí -->
+    <div class="stat-card" style="border-left: 4px solid var(--warning); padding: 1rem;">
         <div class="stat-info">
-            <span class="stat-label">Tổng công nợ (Chưa thu)</span>
-            <span class="stat-value" style="color: var(--danger);">{{ "{:,.2f}".format(total_debt) }} VND</span>
+            <span class="stat-label" style="font-size: 0.85rem;">Chi phí (Đã chi)</span>
+            <span class="stat-value" style="color: var(--warning); font-size: 1.2rem;">{{ "{:,.0f}".format(total_expenses) }} đ</span>
         </div>
-        <div class="stat-icon" style="color: var(--danger);"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="stat-icon" style="color: var(--warning); font-size: 1.5rem; opacity: 0.5;"><i class="fa-solid fa-money-bill-transfer"></i></div>
+    </div>
+
+    <!-- Khối 3: Lợi nhuận ròng -->
+    <div class="stat-card" style="border-left: 4px solid var(--accent); padding: 1rem;">
+        <div class="stat-info">
+            <span class="stat-label" style="font-size: 0.85rem;">Lợi nhuận ròng</span>
+            <span class="stat-value" style="color: var(--accent); font-size: 1.2rem;">{{ "{:,.0f}".format(total_profit) }} đ</span>
+        </div>
+        <div class="stat-icon" style="color: var(--accent); font-size: 1.5rem; opacity: 0.5;"><i class="fa-solid fa-piggy-bank"></i></div>
+    </div>
+
+    <!-- Khối 4: Tổng công nợ -->
+    <div class="stat-card" style="border-left: 4px solid var(--danger); padding: 1rem;">
+        <div class="stat-info">
+            <span class="stat-label" style="font-size: 0.85rem;">Công nợ (Chưa thu)</span>
+            <span class="stat-value" style="color: var(--danger); font-size: 1.2rem;">{{ "{:,.0f}".format(total_debt) }} đ</span>
+        </div>
+        <div class="stat-icon" style="color: var(--danger); font-size: 1.5rem; opacity: 0.5;"><i class="fa-solid fa-file-invoice-dollar"></i></div>
     </div>
 </div>
 
 <!-- Khối Biểu đồ trực quan -->
-<div class="layout-split" style="margin-bottom: 1.5rem;">
+<div class="layout-split" style="margin-bottom: 1.5rem; grid-template-columns: 2.25fr 1fr;">
     <!-- Biểu đồ cột Tài chính -->
     <div class="card" style="display: flex; flex-direction: column;">
         <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fa-solid fa-chart-column" style="color: var(--accent);"></i> Thống kê dòng tiền (VND)</h3>
@@ -113,6 +136,7 @@
 const chartLabels = {{ chart_labels | tojson }};
 const chartRevenue = {{ chart_revenue | tojson }};
 const chartDebt = {{ chart_debt | tojson }};
+const chartExpenses = {{ chart_expenses | tojson }};
 
 // Dữ liệu phòng
 const roomTrong = parseInt("{{ room_stats.get('Trong', 0) }}") || 0;
@@ -122,30 +146,32 @@ const roomDangThue = parseInt("{{ room_stats.get('DangThue', 0) }}") || 0;
 // Biểu đồ cột tài chính
 const ctxFinancial = document.getElementById('financialChart').getContext('2d');
 new Chart(ctxFinancial, {
-    type: 'line',
+    type: 'bar',
     data: {
         labels: chartLabels.length > 0 ? chartLabels : ['Tháng này'],
         datasets: [
             {
-                label: 'Doanh thu thực thu',
+                label: 'Doanh thu',
                 data: chartRevenue.length > 0 ? chartRevenue : [0],
-                backgroundColor: 'rgba(16, 185, 129, 0.2)', // Nền mờ cho Area chart
-                borderColor: '#10b981',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4, // Tạo đường cong mượt
-                pointBackgroundColor: '#10b981',
-                pointRadius: 4
+                backgroundColor: '#10b981',
+                borderRadius: 4
             },
             {
-                label: 'Công nợ chưa thu',
-                data: chartDebt.length > 0 ? chartDebt : [0],
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                borderColor: '#ef4444',
+                label: 'Chi phí',
+                data: chartExpenses.length > 0 ? chartExpenses : [0],
+                backgroundColor: '#f59e0b',
+                borderRadius: 4
+            },
+            {
+                label: 'Lợi nhuận ròng',
+                data: chartRevenue.map((val, idx) => val - (chartExpenses[idx] || 0)),
+                backgroundColor: '#6366f1',
+                type: 'line',
+                borderColor: '#6366f1',
                 borderWidth: 2,
-                fill: true,
+                fill: false,
                 tension: 0.4,
-                pointBackgroundColor: '#ef4444',
+                pointBackgroundColor: '#6366f1',
                 pointRadius: 4
             }
         ]

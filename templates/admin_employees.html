@@ -34,14 +34,21 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="role_id" class="form-label">Vai trò hệ thống *</label>
-            <select id="role_id" name="role_id" class="form-control" required>
-                <option value="" disabled selected>-- Chọn vai trò --</option>
-                <option value="1">Chủ doanh nghiệp / Admin</option>
-                <option value="2">Nhân viên quản lý / Vận hành</option>
-                <option value="3">Cộng tác viên / Sale (Môi giới)</option>
-            </select>
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label for="role_id" class="form-label">Vai trò hệ thống *</label>
+                <select id="role_id" name="role_id" class="form-control" required>
+                    <option value="" disabled selected>-- Chọn vai trò --</option>
+                    <option value="1">Chủ doanh nghiệp / Admin</option>
+                    <option value="2">Nhân viên quản lý / Vận hành</option>
+                    <option value="3">Cộng tác viên / Sale (Môi giới)</option>
+                </select>
+            </div>
+            <div class="form-col form-group">
+                <label for="luong_cung" class="form-label">Lương cứng (VND)</label>
+                <input type="number" id="luong_cung" name="luong_cung" class="form-control" placeholder="Ví dụ: 5000000" min="0" value="0">
+                <small style="color: var(--text-muted);">Sẽ được cộng vào tổng thu nhập nếu đạt đủ chỉ tiêu phòng (KPI).</small>
+            </div>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
@@ -61,6 +68,7 @@
                     <th>Tên đăng nhập</th>
                     <th>Số điện thoại</th>
                     <th>Vai trò</th>
+                    <th>Lương cứng</th>
                     <th>Trạng thái</th>
                     <th style="text-align: center; width: 180px;">Hành động</th>
                 </tr>
@@ -83,6 +91,7 @@
                                 <span class="badge badge-secondary">Khác ({{ u.MaVaiTro }})</span>
                             {% endif %}
                         </td>
+                        <td style="font-weight: 600; color: var(--success);">{{ "{:,.0f}".format(u.LuongCung) }} đ</td>
                         <td>
                             {% if u.TrangThai == 1 %}
                                 <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hoạt động</span>

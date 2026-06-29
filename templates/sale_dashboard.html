@@ -10,18 +10,25 @@
 
 <!-- Thanh công cụ: Thống kê & Tìm kiếm -->
 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch;">
-    <!-- Khối thống kê nhỏ gọn -->
-    <div class="card" style="flex: 1; padding: 1rem; margin-bottom: 0; display: flex; align-items: center; justify-content: center; min-width: 250px;">
-        <div style="display: flex; gap: 1rem; width: 100%; justify-content: space-around;">
-            <div style="text-align: center; border-right: 1px solid #e2e8f0; padding-right: 1rem; flex: 1;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;"><i class="fa-solid fa-house-chimney-user"></i> Phòng trống</span>
-                <strong style="font-size: 1.5rem; color: var(--accent);">{{ total_empty_rooms }}</strong>
-            </div>
-            <div style="text-align: center; flex: 1;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;"><i class="fa-solid fa-handshake"></i> Lượt chốt</span>
-                <strong style="font-size: 1.5rem; color: #06b6d4;">{{ total_my_deals }}</strong>
-            </div>
+    <!-- Khối KPI tiến độ tháng (thay cho thống kê cũ) -->
+    <div class="card" style="flex: 1; padding: 0.75rem 1rem; margin-bottom: 0; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07)); border: 1px solid rgba(99,102,241,0.2); min-width: 280px; display: flex; flex-direction: column; justify-content: center;">
+        <h4 style="margin-top: 0; margin-bottom: 0.5rem; color: var(--accent); font-size: 0.95rem;"><i class="fa-solid fa-bullseye"></i> KPI cá nhân (Tháng {{ current_month }}/{{ current_year }})</h4>
+        {% set kpi_percent = (my_deals_this_month / chi_tieu_kpi * 100) if chi_tieu_kpi > 0 else 100 %}
+        {% if kpi_percent > 100 %}{% set kpi_percent = 100 %}{% endif %}
+        
+        <div style="margin-bottom: 0.3rem; display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem;">
+            <span>Đã chốt: {{ my_deals_this_month }}/{{ chi_tieu_kpi }} phòng</span>
+            <span>{{ "{:.0f}".format(kpi_percent) }}%</span>
         </div>
+        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+            <div style="height: 100%; width: {{ kpi_percent }}%; background: {% if dat_kpi %}var(--success){% else %}var(--accent){% endif %}; transition: width 0.5s ease;"></div>
+        </div>
+        
+        {% if dat_kpi %}
+            <div style="color: var(--success); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-award"></i> Đạt KPI! Nhận Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ) + Hoa hồng!</div>
+        {% else %}
+            <div style="color: var(--danger); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }} phòng để nhận Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ).</div>
+        {% endif %}
     </div>
 
     <!-- Khối tìm kiếm & Lọc -->
@@ -54,7 +61,10 @@
 
 <!-- Danh sách phòng trống -->
 <div class="card">
-    <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống cần chốt</h3>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <h3 style="margin: 0; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống cần chốt</h3>
+        <span class="badge" style="background-color: rgba(99,102,241,0.1); color: var(--accent); font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600;"><i class="fa-solid fa-house-chimney-window"></i> Tổng cộng: {{ total_empty_rooms }} phòng</span>
+    </div>
     <div class="table-responsive">
         <table class="table">
             <thead>

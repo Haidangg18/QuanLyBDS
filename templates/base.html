@@ -27,21 +27,24 @@
                 {% if session.get('role_id') == 3 %}
                     <!-- Vai trò Sale -->
                     <li><a href="{{ url_for('sale_dashboard') }}" class="nav-link {% if request.path == url_for('sale_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-simple"></i> Dashboard</a></li>
-                    <li><a href="{{ url_for('sale_bookings') }}" class="nav-link {% if request.path == url_for('sale_bookings') %}active{% endif %}"><i class="fa-solid fa-handshake"></i> Phòng chốt của bạn</a></li>
+                    <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
+
                 {% elif session.get('role_id') == 2 %}
                     <!-- Vai trò Vận hành -->
                     <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
                     <li><a href="{{ url_for('manager_thanhtoan') }}" class="nav-link {% if request.path == url_for('manager_thanhtoan') %}active{% endif %}"><i class="fa-solid fa-credit-card"></i> Thanh toán</a></li>
+                    <li><a href="{{ url_for('manager_expenses') }}" class="nav-link {% if request.path == url_for('manager_expenses') %}active{% endif %}"><i class="fa-solid fa-file-invoice-dollar"></i> Chi phí</a></li>
                     <li><a href="{{ url_for('shared_contracts') }}" class="nav-link {% if request.path == url_for('shared_contracts') %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
-                    <li><a href="{{ url_for('shared_tenants') }}" class="nav-link {% if request.path == url_for('shared_tenants') %}active{% endif %}"><i class="fa-solid fa-people-roof"></i> Khách thuê</a></li>
+
                     <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho vật tư</a></li>
                 {% elif session.get('role_id') == 1 %}
                     <!-- Vai trò Admin -->
                     <li><a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-pie"></i> Báo cáo vĩ mô</a></li>
                     <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
                     <li><a href="{{ url_for('manager_thanhtoan') }}" class="nav-link {% if request.path == url_for('manager_thanhtoan') %}active{% endif %}"><i class="fa-solid fa-credit-card"></i> Thanh toán</a></li>
+                    <li><a href="{{ url_for('manager_expenses') }}" class="nav-link {% if request.path == url_for('manager_expenses') %}active{% endif %}"><i class="fa-solid fa-file-invoice-dollar"></i> Chi phí</a></li>
                     <li><a href="{{ url_for('shared_contracts') }}" class="nav-link {% if request.path == url_for('shared_contracts') %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
-                    <li><a href="{{ url_for('shared_tenants') }}" class="nav-link {% if request.path == url_for('shared_tenants') %}active{% endif %}"><i class="fa-solid fa-people-roof"></i> Khách thuê</a></li>
+
                     <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho vật tư</a></li>
                     <li><a href="{{ url_for('admin_employees') }}" class="nav-link {% if request.path == url_for('admin_employees') %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Nhân sự</a></li>
                 {% endif %}
