@@ -305,6 +305,62 @@ def sale_dashboard():
     )
 
 
+@app.route('/sale/bookings')
+@role_required([3])
+def sale_bookings():
+    user_id = session['user_id']
+    db = get_db()
+    
+    # 1. Phiếu chốt đang giữ phòng (hợp đồng có trạng thái 'Giữ phòng') của Sale này
+    my_bookings = db.execute(
+        """
+        SELECT tk.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, ts.GiaThue, ts.HoaHong as HoaHongTaiSan, hd.NgayBatDau, hd.TrangThai as TrangThaiHopDong
+        FROM THONG_TIN_CHOT_KHACH tk
+        JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan
+        JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
+        WHERE tk.MaTaiKhoanChot = ? AND hd.TrangThai = 'Giữ phòng'
+        ORDER BY tk.MaChotKhach DESC
+        """, (user_id,)
+    ).fetchall()
+    
+    # 2. Hợp đồng đã hiệu lực của Sale này (hợp đồng có trạng thái khác 'Giữ phòng')
+    my_contracts = db.execute(
+        """
+        SELECT hd.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, kt.HoTen as TenKhach, kt.SoDienThoai
+        FROM HOP_DONG hd
+        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
+        JOIN KHACH_THUE kt ON hd.MaKhachThue = kt.MaKhachThue
+        JOIN THONG_TIN_CHOT_KHACH tk ON hd.MaHopDong = tk.MaHopDong
+        WHERE tk.MaTaiKhoanChot = ? AND hd.TrangThai != 'Giữ phòng'
+        ORDER BY hd.MaHopDong DESC
+        """, (user_id,)
+    ).fetchall()
+    
+    # 3. Khách thuê của bản thân Sale này
+    my_tenants = db.execute(
+        """
+        SELECT DISTINCT kt.*, ts.SoPhong, ts.DiaChi as DiaChiRoom, hd.MaHopDong, hd.TrangThai as TrangThaiHopDong
+        FROM KHACH_THUE kt
+        JOIN HOP_DONG hd ON kt.MaKhachThue = hd.MaKhachThue
+        JOIN THONG_TIN_CHOT_KHACH tk ON hd.MaHopDong = tk.MaHopDong
+        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
+        WHERE tk.MaTaiKhoanChot = ?
+        ORDER BY kt.MaKhachThue DESC
+        """, (user_id,)
+    ).fetchall()
+    
+    db.close()
+    current_date = date.today().strftime('%d/%m/%Y')
+    
+    return render_template(
+        'sale_bookings.html',
+        bookings=my_bookings,
+        contracts=my_contracts,
+        tenants=my_tenants,
+        current_date=current_date
+    )
+
+
 
 
 @app.route('/sale/search')
@@ -1002,6 +1058,7 @@ def manager_expenses():
     current_year = int(request.args.get('year', date.today().year))
     
     if request.method == 'POST':
+        expense_id = request.form.get('expense_id')
         ten_chi_phi = request.form.get('ten_chi_phi')
         so_tien = float(request.form.get('so_tien').replace(',', ''))
         ngay_nhap = request.form.get('ngay_nhap', date.today().isoformat())
@@ -1011,18 +1068,30 @@ def manager_expenses():
         ma_tai_khoan = session.get('user_id')
         
         try:
-            db.execute(
-                """
-                INSERT INTO CHI_PHI (Thang, Nam, TenChiPhi, SoTien, NgayNhap, MaTaiKhoanNhap, GhiChu)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (thang, nam, ten_chi_phi, so_tien, ngay_nhap, ma_tai_khoan, ghi_chu)
-            )
-            db.commit()
-            flash("Thêm khoản chi phí thành công!", "success")
+            if expense_id:
+                db.execute(
+                    """
+                    UPDATE CHI_PHI 
+                    SET Thang = ?, Nam = ?, TenChiPhi = ?, SoTien = ?, NgayNhap = ?, GhiChu = ?
+                    WHERE MaChiPhi = ?
+                    """,
+                    (thang, nam, ten_chi_phi, so_tien, ngay_nhap, ghi_chu, expense_id)
+                )
+                db.commit()
+                flash("Cập nhật khoản chi phí thành công!", "success")
+            else:
+                db.execute(
+                    """
+                    INSERT INTO CHI_PHI (Thang, Nam, TenChiPhi, SoTien, NgayNhap, MaTaiKhoanNhap, GhiChu)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (thang, nam, ten_chi_phi, so_tien, ngay_nhap, ma_tai_khoan, ghi_chu)
+                )
+                db.commit()
+                flash("Thêm khoản chi phí thành công!", "success")
         except Exception as e:
             db.rollback()
-            flash(f"Lỗi thêm chi phí: {str(e)}", "error")
+            flash(f"Lỗi ghi nhận chi phí: {str(e)}", "error")
             
         return redirect(url_for('manager_expenses', month=current_month, year=current_year))
         
@@ -1077,7 +1146,7 @@ def admin_dashboard():
     monthly_data = {}
     for r in monthly_rows:
         key = f"{r['Nam']}-{r['Thang']}"
-        monthly_data[key] = {'Nam': r['Nam'], 'Thang': r['Thang'], 'Revenue': r['Revenue'], 'Debt': r['Debt'], 'Expense': 0}
+        monthly_data[key] = {'Nam': r['Nam'], 'Thang': r['Thang'], 'Revenue': r['Revenue'] * 1000, 'Debt': r['Debt'] * 1000, 'Expense': 0}
         
     for r in expense_rows:
         key = f"{r['Nam']}-{r['Thang']}"
@@ -1103,23 +1172,6 @@ def admin_dashboard():
         total_debt += row['Debt']
         total_expenses += row['Expense']
         
-    import datetime
-    import random
-    
-    needed_mock_months = 6 - len(sorted_months)
-    if needed_mock_months > 0:
-        now = datetime.datetime.now()
-        for i in range(needed_mock_months, 0, -1):
-            m = now.month - i
-            y = now.year
-            while m <= 0:
-                m += 12
-                y -= 1
-            chart_labels.append(f"T{m}/{y}")
-            chart_revenue.append(random.randint(60, 150) * 1000000)
-            chart_debt.append(random.randint(2, 15) * 1000000)
-            chart_expenses.append(random.randint(10, 40) * 1000000)
-            
     for row in sorted_months:
         chart_labels.append(f"T{row['Thang']}/{row['Nam']}")
         chart_revenue.append(row['Revenue'])
@@ -1299,7 +1351,7 @@ def admin_config():
     return render_template('admin_config.html', configs=configs)
 
 @app.route('/admin/update_kpi', methods=['POST'])
-@role_required([1, 2])
+@role_required([1])
 def admin_update_kpi():
     db = get_db()
     chi_tieu_kpi = int(request.form.get('chi_tieu_kpi', 6))

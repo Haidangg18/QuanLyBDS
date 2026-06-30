@@ -230,8 +230,8 @@
 <!-- Tab 3: Thống kê lương / KPI -->
 <div class="tab-content" id="tab-salary" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
-        {% if session.get('role_id') in [1, 2] %}
-        <!-- Form cập nhật KPI cho Admin & Manager -->
+        {% if session.get('role_id') == 1 %}
+        <!-- Form cập nhật KPI cho Admin -->
         <div style="display: inline-flex; align-items: center; gap: 0.8rem; background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.2); padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0;">
             <form action="{{ url_for('admin_update_kpi') }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0;">
                 <label for="chi_tieu_kpi" style="font-weight: 600; white-space: nowrap; margin-bottom: 0;"><i class="fa-solid fa-gear"></i> Set KPI phòng cho sale:</label>

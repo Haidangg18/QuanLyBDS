@@ -49,7 +49,7 @@
                 <label for="room_number" class="form-label">Số phòng/Tên phòng *</label>
                 <input type="text" id="room_number" name="room_number" class="form-control" placeholder="Ví dụ: 201, Mặt bằng 1..." required>
             </div>
-            <div class="form-col form-group">
+            <div class="form-col form-group" id="floor-container">
                 <label for="floor" class="form-label">Tầng *</label>
                 <input type="number" id="floor" name="floor" class="form-control" min="1" placeholder="Ví dụ: 1, 2..." required>
             </div>
@@ -106,5 +106,18 @@
             alert('Vui lòng nhập giá thuê gốc trước khi tính 50%!');
         }
     }
+
+    document.getElementById('property_type').addEventListener('change', function() {
+        const floorContainer = document.getElementById('floor-container');
+        const floorInput = document.getElementById('floor');
+        if (this.value === '2') { // Nhà nguyên căn
+            floorContainer.style.display = 'none';
+            floorInput.value = '1';
+            floorInput.removeAttribute('required');
+        } else {
+            floorContainer.style.display = '';
+            floorInput.setAttribute('required', 'required');
+        }
+    });
 </script>
 {% endblock %}

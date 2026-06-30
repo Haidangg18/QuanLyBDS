@@ -8,8 +8,12 @@
     <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
 </div>
 
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+    <button class="btn btn-primary" onclick="toggleAddForm()"><i class="fa-solid fa-user-plus"></i> Thêm nhân sự mới</button>
+</div>
+
 <!-- Form thêm mới tài khoản ở phía trên -->
-<div class="card">
+<div class="card" id="add-employee-card" style="display: none; margin-bottom: 1.5rem;">
     <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-user-plus"></i> Tạo tài khoản nhân sự mới</h3>
     <form action="{{ url_for('admin_employees') }}" method="POST">
         <div class="form-row">
@@ -91,7 +95,13 @@
                                 <span class="badge badge-secondary">Khác ({{ u.MaVaiTro }})</span>
                             {% endif %}
                         </td>
-                        <td style="font-weight: 600; color: var(--success);">{{ "{:,.0f}".format(u.LuongCung) }} đ</td>
+                        <td style="font-weight: 600; color: var(--success);">
+                            {% if u.MaVaiTro == 1 %}
+                                -
+                            {% else %}
+                                {{ "{:,.0f}".format(u.LuongCung) }} đ
+                            {% endif %}
+                        </td>
                         <td>
                             {% if u.TrangThai == 1 %}
                                 <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hoạt động</span>
@@ -132,4 +142,17 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAddForm() {
+    var card = document.getElementById('add-employee-card');
+    if (card.style.display === 'none') {
+        card.style.display = 'block';
+    } else {
+        card.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

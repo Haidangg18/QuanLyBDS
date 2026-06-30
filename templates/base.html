@@ -28,6 +28,7 @@
                     <!-- Vai trò Sale -->
                     <li><a href="{{ url_for('sale_dashboard') }}" class="nav-link {% if request.path == url_for('sale_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-simple"></i> Dashboard</a></li>
                     <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-list-check"></i> Bảng theo dõi</a></li>
+                    <li><a href="{{ url_for('sale_bookings') }}" class="nav-link {% if request.path == url_for('sale_bookings') %}active{% endif %}"><i class="fa-solid fa-handshake"></i> Lịch sử chốt</a></li>
 
                 {% elif session.get('role_id') == 2 %}
                     <!-- Vai trò Vận hành -->
@@ -87,7 +88,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2026 Hệ thống Quản lý Bất động sản Đăng Vy. Thiết kế chuyên nghiệp, vận hành mượt mà.</p>
+        <p>&copy; 2026 Hệ thống Quản lý Bất động sản Đăng Vy.</p>
     </footer>
 
     <script>

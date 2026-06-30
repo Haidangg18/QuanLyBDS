@@ -58,11 +58,16 @@
                             </td>
                             <td>{{ item.NguoiNhap }}</td>
                             <td style="text-align: center;">
-                                <form action="{{ url_for('manager_expense_delete', expense_id=item.MaChiPhi) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khoản chi phí này?');">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Xóa">
-                                        <i class="fa-solid fa-trash"></i>
+                                <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                                    <button type="button" class="btn btn-secondary btn-sm" title="Sửa" onclick="editExpense('{{ item.MaChiPhi }}', '{{ item.TenChiPhi | escape }}', '{{ item.SoTien }}', '{{ item.NgayNhap }}', '{{ item.GhiChu | escape }}')">
+                                        <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
-                                </form>
+                                    <form action="{{ url_for('manager_expense_delete', expense_id=item.MaChiPhi) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khoản chi phí này?');" style="margin: 0; display: inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Xóa">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -78,8 +83,9 @@
 
     <!-- Cột phải: Form nhập chi phí -->
     <div class="card">
-        <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-plus-circle"></i> Thêm Khoản Chi Phí Mới</h3>
-        <form action="{{ url_for('manager_expenses') }}" method="POST">
+        <h3 id="form-title" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-plus-circle"></i> Thêm Khoản Chi Phí Mới</h3>
+        <form id="expense-form" action="{{ url_for('manager_expenses') }}" method="POST">
+            <input type="hidden" id="expense_id" name="expense_id" value="">
             <div class="form-group">
                 <label for="ten_chi_phi" class="form-label">Tên khoản chi phí *</label>
                 <input type="text" id="ten_chi_phi" name="ten_chi_phi" class="form-control" placeholder="Ví dụ: Sửa điều hòa phòng 201..." required>
@@ -101,9 +107,14 @@
                 <textarea id="ghi_chu" name="ghi_chu" class="form-control" rows="3" placeholder="Ghi chú thêm (nếu có)..."></textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                <i class="fa-solid fa-square-plus"></i> Xác nhận Lưu Chi Phí
-            </button>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" id="submit-btn" class="btn btn-primary" style="flex: 2; margin-top: 1rem;">
+                    <i class="fa-solid fa-square-plus"></i> Xác nhận Lưu Chi Phí
+                </button>
+                <button type="button" id="cancel-btn" class="btn btn-secondary" style="flex: 1; margin-top: 1rem; display: none;" onclick="resetForm()">
+                    Hủy
+                </button>
+            </div>
         </form>
     </div>
 </div>
@@ -123,5 +134,32 @@
             }
         });
     });
+
+    function editExpense(id, name, amount, date, notes) {
+        document.getElementById('expense_id').value = id;
+        document.getElementById('ten_chi_phi').value = name;
+        
+        let value = amount.replace(/,/g, '');
+        let formattedAmount = parseInt(value).toLocaleString('en-US');
+        document.getElementById('so_tien').value = formattedAmount;
+        
+        document.getElementById('ngay_nhap').value = date;
+        document.getElementById('ghi_chu').value = notes;
+        
+        document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Chỉnh Sửa Khoản Chi Phí';
+        document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-circle-check"></i> Xác nhận Cập Nhật';
+        document.getElementById('cancel-btn').style.display = 'inline-block';
+    }
+
+    function resetForm() {
+        document.getElementById('expense_id').value = '';
+        document.getElementById('ten_chi_phi').value = '';
+        document.getElementById('so_tien').value = '';
+        document.getElementById('ghi_chu').value = '';
+        
+        document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-plus-circle"></i> Thêm Khoản Chi Phí Mới';
+        document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-square-plus"></i> Xác nhận Lưu Chi Phí';
+        document.getElementById('cancel-btn').style.display = 'none';
+    }
 </script>
 {% endblock %}
