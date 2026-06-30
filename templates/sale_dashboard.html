@@ -11,46 +11,66 @@
 <!-- Thanh công cụ: Thống kê & Tìm kiếm -->
 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch;">
     <!-- Khối KPI tiến độ tháng (thay cho thống kê cũ) -->
-    <div class="card" style="flex: 1; padding: 0.75rem 1rem; margin-bottom: 0; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07)); border: 1px solid rgba(99,102,241,0.2); min-width: 280px; display: flex; flex-direction: column; justify-content: center;">
-        <h4 style="margin-top: 0; margin-bottom: 0.5rem; color: var(--accent); font-size: 0.95rem;"><i class="fa-solid fa-bullseye"></i> KPI cá nhân (Tháng {{ current_month }}/{{ current_year }})</h4>
+    <div class="card kpi-container-card" style="flex: 1; padding: 0.75rem 1rem; margin-bottom: 0; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07)); border: 1px solid rgba(99,102,241,0.2); min-width: 280px; display: flex; flex-direction: column; justify-content: center;">
         {% set kpi_percent = (my_deals_this_month / chi_tieu_kpi * 100) if chi_tieu_kpi > 0 else 100 %}
         {% if kpi_percent > 100 %}{% set kpi_percent = 100 %}{% endif %}
         
-        <div style="margin-bottom: 0.3rem; display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem;">
-            <span>Đã chốt: {{ my_deals_this_month }}/{{ chi_tieu_kpi }} phòng</span>
-            <span>{{ "{:.0f}".format(kpi_percent) }}%</span>
+        <!-- Desktop view for KPI -->
+        <div class="desktop-only">
+            <h4 class="kpi-title" style="margin-top: 0; margin-bottom: 0.5rem; color: var(--accent); font-size: 0.95rem;"><i class="fa-solid fa-bullseye"></i> KPI cá nhân (Tháng {{ current_month }}/{{ current_year }})</h4>
+            <div class="kpi-progress-text" style="margin-bottom: 0.3rem; display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem;">
+                <span>Đã chốt: {{ my_deals_this_month }}/{{ chi_tieu_kpi }} phòng</span>
+                <span>{{ "{:.0f}".format(kpi_percent) }}%</span>
+            </div>
+            <div class="kpi-progress-bar" style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+                <div style="height: 100%; width: {{ kpi_percent }}%; background: {% if dat_kpi %}var(--success){% else %}var(--accent){% endif %}; transition: width 0.5s ease;"></div>
+            </div>
+            <div class="kpi-status-text">
+                {% if dat_kpi %}
+                    <span style="color: var(--success); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-award"></i> Đạt KPI! Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ) + Hoa hồng!</span>
+                {% else %}
+                    <span style="color: var(--danger); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }} phòng để nhận Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ).</span>
+                {% endif %}
+            </div>
         </div>
-        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
-            <div style="height: 100%; width: {{ kpi_percent }}%; background: {% if dat_kpi %}var(--success){% else %}var(--accent){% endif %}; transition: width 0.5s ease;"></div>
+
+        <!-- Mobile view (super compact single thin line) -->
+        <div class="mobile-only" style="font-size: 0.8rem; font-weight: 700;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span><i class="fa-solid fa-bullseye" style="color: var(--accent);"></i> KPI: {{ my_deals_this_month }}/{{ chi_tieu_kpi }} phòng ({{ "{:.0f}".format(kpi_percent) }}%)</span>
+                {% if dat_kpi %}
+                    <span style="color: var(--success); font-size: 0.75rem;"><i class="fa-solid fa-check"></i> Đạt Lương Cứng</span>
+                {% else %}
+                    <span style="color: var(--danger); font-size: 0.75rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }} phòng</span>
+                {% endif %}
+            </div>
         </div>
-        
-        {% if dat_kpi %}
-            <div style="color: var(--success); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-award"></i> Đạt KPI! Nhận Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ) + Hoa hồng!</div>
-        {% else %}
-            <div style="color: var(--danger); font-weight: 600; font-size: 0.8rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }} phòng để nhận Lương Cứng ({{ "{:,.0f}".format(luong_cung * 1000)|replace(',', '.') }}đ).</div>
-        {% endif %}
     </div>
 
     <!-- Khối tìm kiếm & Lọc -->
-    <div class="card" style="flex: 2; padding: 1rem; margin-bottom: 0; display: flex; align-items: center; gap: 1rem; min-width: 350px;">
-        <!-- Thanh tìm kiếm văn bản -->
-        <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.8rem;">
-            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary);"></i>
-            <input type="text" id="search-input" placeholder="Nhập địa chỉ nhà, số phòng để tìm nhanh..." onkeyup="filterRooms()" style="border: none; outline: none; background: transparent; width: 100%; font-size: 0.95rem; font-family: inherit; color: var(--text-primary);">
+    <div class="card search-filter-container" style="flex: 2; padding: 1rem; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem; min-width: 350px;">
+        <!-- Thanh tìm kiếm văn bản và nút Lọc trên mobile -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+            <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.8rem; width: 100%;">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary);"></i>
+                <input type="text" id="search-input" placeholder="Nhập địa chỉ nhà, số phòng để tìm nhanh..." onkeyup="filterRooms()" style="border: none; outline: none; background: transparent; width: 100%; font-size: 0.95rem; font-family: inherit; color: var(--text-primary);">
+            </div>
+            <!-- Nút Toggle Bộ lọc (Chỉ hiển thị trên Mobile) -->
+            <button type="button" class="mobile-only btn btn-secondary" onclick="toggleMobileFilters()" style="padding: 0.5rem 0.8rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #cbd5e1;">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
         </div>
-        <!-- Bộ lọc Khu vực -->
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <select id="area-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px;">
-                <option value="ALL">-- Lọc theo khu vực --</option>
+        
+        <!-- Nhóm các bộ lọc chọn (Trực quan trên Desktop, mặc định ẩn trên Mobile) -->
+        <div id="mobile-filters" class="filters-dropdown-group" style="display: flex; gap: 0.5rem; width: 100%; flex: 1;">
+            <select id="area-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px; flex: 1; min-width: 0;">
+                <option value="ALL">-- Khu vực --</option>
                 {% for area in areas %}
                     <option value="{{ area }}">{{ area }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <!-- Bộ lọc Loại hình -->
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <select id="type-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px;">
-                <option value="ALL">-- Tất cả loại hình --</option>
+            <select id="type-filter" class="filter-select" onchange="filterRooms()" style="margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 8px; flex: 1; min-width: 0;">
+                <option value="ALL">-- Loại hình --</option>
                 <option value="1">Phòng trọ</option>
                 <option value="2">Nhà nguyên căn</option>
                 <option value="3">Mặt bằng</option>
@@ -65,7 +85,9 @@
         <h3 style="margin: 0; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống cần chốt</h3>
         <span class="badge" style="background-color: rgba(99,102,241,0.1); color: var(--accent); font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600;"><i class="fa-solid fa-house-chimney-window"></i> Tổng cộng: {{ total_empty_rooms }} phòng</span>
     </div>
-    <div class="table-responsive">
+    
+    <!-- DESKTOP VIEW (TABLE) -->
+    <div class="table-responsive desktop-only">
         <table class="table">
             <thead>
                 <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
@@ -89,7 +111,7 @@
                         <td><strong>{{ r.KhuVuc }}</strong></td>
                         <td style="text-align: center;">{{ loop.index }}</td>
                         <td>{{ r.DiaChi }}</td>
-                        <td><span class="badge badge-trong" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
+                        <td><span class="badge badge-trong badge-trong-desktop" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
                         <td style="font-weight: 700;">{{ "{:,.2f}".format(r.GiaThue) }}</td>
                         <td>{{ r.GhiChu if r.GhiChu else '-' }}</td>
                         <td>
@@ -117,11 +139,63 @@
             </tbody>
         </table>
     </div>
+
+    <!-- MOBILE VIEW (CARDS) -->
+    <div class="mobile-only">
+        <div class="room-cards-list">
+            {% if empty_rooms %}
+                {% for r in empty_rooms %}
+                <div class="room-card room-row" data-area="{{ r.KhuVuc }}" data-type="{{ r.MaLoaiTaiSan }}">
+                    <div class="room-card-header">
+                        <span class="room-card-area">{{ r.KhuVuc }}</span>
+                        <!-- must have badge-trong class to let filter JS match the text -->
+                        <span class="room-card-number badge-trong">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span>
+                    </div>
+                    <div class="room-card-address">
+                        <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ r.DiaChi }}
+                    </div>
+                    <div class="room-card-financials">
+                        <div class="financial-item">
+                            <span class="fin-label">Giá thuê</span>
+                            <strong class="fin-value">{{ "{:,.0f}".format(r.GiaThue * 1000)|replace(',', '.') }}đ</strong>
+                        </div>
+                        <div class="financial-item">
+                            <span class="fin-label">Hoa hồng</span>
+                            <strong class="fin-value commission-value">{{ "{:,.0f}".format(r.HoaHong * 1000)|replace(',', '.') }}đ</strong>
+                        </div>
+                    </div>
+                    <div class="room-card-details">
+                        <div><i class="fa-solid fa-user-clock"></i> NV cũ: {{ r.TenNhanVienChotCu if r.TenNhanVienChotCu else '-' }}</div>
+                        <div><i class="fa-solid fa-calendar-day"></i> Trống từ: {{ r.NgayTrong if r.NgayTrong else '-' }}</div>
+                        {% if r.ThietBi %}
+                            <div class="devices-list"><i class="fa-solid fa-cubes"></i> {{ r.ThietBi }}</div>
+                        {% endif %}
+                        {% if r.GhiChu %}
+                            <div class="room-card-note"><i class="fa-solid fa-comment-dots"></i> {{ r.GhiChu }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="room-card-action">
+                        <a href="{{ url_for('sale_chot_coc', room_id=r.MaTaiSan) }}" class="btn btn-primary btn-block">
+                            <i class="fa-solid fa-handshake"></i> Chốt khách
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy phòng trống nào.</div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function toggleMobileFilters() {
+    const filters = document.getElementById('mobile-filters');
+    filters.classList.toggle('active');
+}
+
 function filterRooms() {
     const areaValue = document.getElementById('area-filter').value;
     const typeValue = document.getElementById('type-filter').value;
@@ -133,10 +207,25 @@ function filterRooms() {
         const rowArea = row.getAttribute('data-area');
         const rowType = row.getAttribute('data-type');
         
-        // Trích xuất chuỗi text của phòng và địa chỉ
-        const roomNumText = row.querySelector('.badge-trong').textContent.toLowerCase();
-        const addressText = row.cells[2].textContent.toLowerCase();
-        const areaText = row.cells[0].textContent.toLowerCase();
+        let roomNumText = '';
+        let addressText = '';
+        let areaText = '';
+        
+        if (row.cells) {
+            // Desktop table row
+            roomNumText = row.querySelector('.badge-trong').textContent.toLowerCase();
+            addressText = row.cells[2].textContent.toLowerCase();
+            areaText = row.cells[0].textContent.toLowerCase();
+        } else {
+            // Mobile card
+            const roomEl = row.querySelector('.badge-trong');
+            roomNumText = roomEl ? roomEl.textContent.toLowerCase() : '';
+            
+            const addrEl = row.querySelector('.room-card-address');
+            addressText = addrEl ? addrEl.textContent.toLowerCase() : '';
+            
+            areaText = rowArea ? rowArea.toLowerCase() : '';
+        }
         
         const matchesArea = (areaValue === 'ALL' || rowArea === areaValue);
         const matchesType = (typeValue === 'ALL' || rowType === typeValue);

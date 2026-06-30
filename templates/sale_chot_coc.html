@@ -8,6 +8,20 @@
     <a href="{{ url_for('sale_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại danh sách</a>
 </div>
 
+<!-- Mobile compact room info banner -->
+<div class="mobile-only alert alert-info" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; font-size: 0.9rem; border-left: 4px solid var(--accent);">
+    <div style="margin-bottom: 0.25rem;">
+        <i class="fa-solid fa-house-chimney"></i> <strong>{{ room.KhuVuc }} - Phòng {{ room.SoPhong }}</strong> (Tầng {{ room.Tang }})
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+        <i class="fa-solid fa-location-dot"></i> {{ room.DiaChi }}
+    </div>
+    <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+        <span><i class="fa-solid fa-money-bill-wave"></i> Giá: <strong>{{ "{:,.0f}".format(room.GiaThue * 1000)|replace(',', '.') }}đ</strong></span>
+        <span><i class="fa-solid fa-gift"></i> HH: <strong style="color: var(--success);">{{ "{:,.0f}".format(room.HoaHong * 1000)|replace(',', '.') }}đ</strong></span>
+    </div>
+</div>
+
 <div class="layout-split">
     <!-- Cột trái: Form nhập liệu -->
     <div class="card">
@@ -73,94 +87,95 @@
 
             <div class="form-group">
                 <label for="notes" class="form-label">Ghi chú đóng tiền cọc (Thông tin thanh toán rải rác)</label>
-                <textarea id="notes" name="notes" rows="4" class="form-control" placeholder="Ghi nhận lịch trình đóng cọc, ví dụ: 'Khách chuyển khoản trước 1tr đợt 1 ngày 12/06. Đợt 2 đóng nốt 1.5tr khi nhận phòng ngày 18/06'"></textarea>
+                <textarea id="notes" name="notes" rows="3" class="form-control" placeholder="Ghi nhận lịch trình đóng cọc, ví dụ: 'Khách chuyển khoản trước 1tr đợt 1 ngày 12/06. Đợt 2 đóng nốt 1.5tr khi nhận phòng ngày 18/06'"></textarea>
             </div>
 
-            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
+            <!-- Bộ máy tính tổng tiền đợt 1 (Được dời vào đây để liền mạch trên mobile) -->
+            <div id="calculator-box" class="card" style="display: none; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.3); margin-bottom: 1rem; padding: 1.25rem; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
+                <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem;"><i class="fa-solid fa-calculator"></i> Bảng tính tiền đợt 1</h4>
+                <div style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>Số ngày ở lẻ (đến ca thu mùng {{ room.HanThanhToan }}):</span>
+                        <strong id="calc-days" style="color: var(--text-primary);">0</strong> ngày
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>1. Tiền cọc (1 tháng):</span>
+                        <strong id="calc-deposit" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>2. Tiền nhà lẻ ngày:</span>
+                        <strong id="calc-rent-le" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>3. Tiền dịch vụ lẻ ngày:</span>
+                        <strong id="calc-dv-le" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid rgba(99, 102, 241, 0.2); margin: 0.5rem 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                        <span>TỔNG CẦN ĐÓNG ĐỢT 1:</span>
+                        <strong id="calc-total" style="color: var(--text-primary);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                        <span>ĐÃ CỌC TRƯỚC:</span>
+                        <strong id="calc-paid" style="color: var(--success);">0 đ</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: 700; border-top: 1px dashed rgba(99, 102, 241, 0.3); padding-top: 0.5rem; margin-top: 0.5rem;">
+                        <span style="color: var(--text-primary);">CÒN LẠI PHẢI ĐÓNG:</span>
+                        <span id="calc-remaining" style="color: var(--warning-text);">0 đ</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lưu ý khóa phòng -->
+            <div class="card" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15); margin-bottom: 1rem; padding: 1rem;">
+                <h4 style="color: #fca5a5; margin-bottom: 0.3rem; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-triangle-exclamation"></i> Lưu ý khóa phòng</h4>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">
+                    Sau khi gửi thông tin, trạng thái phòng sẽ lập tức chuyển sang <strong>Giữ phòng</strong> để khóa phòng. Các Sale khác sẽ không thể chốt phòng này nữa.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 0.5rem;">
                 <i class="fa-solid fa-paper-plane"></i> Gửi thông tin chốt phòng
             </button>
         </form>
     </div>
 
-    <!-- Cột phải: Thông tin phòng đang chốt và Bộ tính toán -->
-    <div class="sticky-sidebar-mobile" style="display: flex; flex-direction: column; gap: 1.5rem; position: sticky; top: 100px; height: fit-content; max-height: calc(100vh - 120px); overflow-y: auto; padding-right: 5px;">
+    <!-- Cột phải: Thông tin phòng đang chốt (Chỉ hiện trên Desktop) -->
+    <div class="sticky-sidebar-mobile desktop-only" style="position: sticky; top: 100px; height: fit-content; max-height: calc(100vh - 120px); overflow-y: auto; padding-right: 5px;">
         <div class="card" style="margin-bottom: 0;">
             <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-house-circle-check"></i> Thông tin phòng</h3>
-            <div class="table-responsive">
-<table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Mã số tài sản:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ room.MaSoTaiSan }}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Khu vực:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600;">{{ room.KhuVuc }}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-size: 0.9rem;">{{ room.DiaChi }}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số phòng / Tầng:</td>
-                    <td style="padding: 0.75rem 0; text-align: right;"><span class="badge badge-trong">Phòng {{ room.SoPhong }}</span> (Tầng {{ room.Tang }})</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá thuê gốc:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND/tháng</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-glass);">
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hoa hồng của bạn:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--success);">{{ "{:,.2f}".format(room.HoaHong) }} VND</td>
-                </tr>
-                <tr>
-                    <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn chốt ca thu:</td>
-                    <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
-                </tr>
-            </table>
-</div>
-        </div>
-
-        <!-- Bộ máy tính tổng tiền đợt 1 -->
-        <div id="calculator-box" class="card" style="display: none; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.3); margin-bottom: 0; padding: 1.25rem; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
-            <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 0.75rem;"><i class="fa-solid fa-calculator"></i> Bảng tính tiền đợt 1</h4>
-            <div style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span>Số ngày ở lẻ (đến ca thu mùng {{ room.HanThanhToan }}):</span>
-                    <strong id="calc-days" style="color: var(--text-primary);">0</strong> ngày
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span>1. Tiền cọc (1 tháng):</span>
-                    <strong id="calc-deposit" style="color: var(--text-primary);">0 đ</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span>2. Tiền nhà lẻ ngày:</span>
-                    <strong id="calc-rent-le" style="color: var(--text-primary);">0 đ</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span>3. Tiền dịch vụ lẻ ngày:</span>
-                    <strong id="calc-dv-le" style="color: var(--text-primary);">0 đ</strong>
-                </div>
-                <hr style="border: 0; border-top: 1px solid rgba(99, 102, 241, 0.2); margin: 0.5rem 0;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
-                    <span>TỔNG CẦN ĐÓNG ĐỢT 1:</span>
-                    <strong id="calc-total" style="color: var(--text-primary);">0 đ</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.25rem;">
-                    <span>ĐÃ CỌC TRƯỚC:</span>
-                    <strong id="calc-paid" style="color: var(--success);">0 đ</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: 700; border-top: 1px dashed rgba(99, 102, 241, 0.3); padding-top: 0.5rem; margin-top: 0.5rem;">
-                    <span style="color: var(--text-primary);">CÒN LẠI PHẢI ĐÓNG:</span>
-                    <span id="calc-remaining" style="color: var(--warning-text);">0 đ</span>
-                </div>
+            <div style="padding: 0.25rem 0;">
+                <table style="width: 100%; font-size: 0.95rem; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Mã số tài sản:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ room.MaSoTaiSan }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Khu vực:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-weight: 600;">{{ room.KhuVuc }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Địa chỉ:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-size: 0.9rem;">{{ room.DiaChi }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Số phòng / Tầng:</td>
+                        <td style="padding: 0.75rem 0; text-align: right;"><span class="badge badge-trong">Phòng {{ room.SoPhong }}</span> (Tầng {{ room.Tang }})</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Giá thuê gốc:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--text-primary);">{{ "{:,.2f}".format(room.GiaThue) }} VND/tháng</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(15, 23, 42, 0.08);">
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hoa hồng của bạn:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-weight: 700; color: var(--success);">{{ "{:,.2f}".format(room.HoaHong) }} VND</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem 0; color: var(--text-secondary);">Hạn chốt ca thu:</td>
+                        <td style="padding: 0.75rem 0; text-align: right; font-weight: 600; color: var(--info);">Mùng {{ room.HanThanhToan }} hàng tháng</td>
+                    </tr>
+                </table>
             </div>
-        </div>
-        
-        <div class="card" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15);">
-            <h4 style="color: #fca5a5; margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Lưu ý khóa phòng</h4>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
-                Sau khi gửi thông tin, trạng thái phòng sẽ lập tức chuyển sang <strong>Giữ phòng</strong> để khóa phòng. Các Sale khác sẽ không thể chốt phòng này nữa. Đồng thời, hợp đồng giữ phòng và hóa đơn đầu tiên cũng sẽ được tạo tự động trên hệ thống.
-            </p>
         </div>
     </div>
 </div>

@@ -27,7 +27,9 @@
 <div class="tab-content" id="tab-bookings">
     <div class="card">
         <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-hourglass-half"></i> Danh sách phiếu chốt đang giữ phòng</h3>
-        <div class="table-responsive">
+        
+        <!-- DESKTOP VIEW -->
+        <div class="table-responsive desktop-only">
             <table class="table" style="font-size: 0.9rem;">
                 <thead>
                     <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
@@ -81,6 +83,59 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- MOBILE VIEW -->
+        <div class="mobile-only">
+            <div class="room-cards-list">
+                {% if bookings %}
+                    {% for b in bookings %}
+                    <div class="room-card">
+                        <div class="room-card-header">
+                            <span class="room-card-area">{{ b.KhuVuc }}</span>
+                            <span class="room-card-number">Phòng {{ b.SoPhong }}</span>
+                        </div>
+                        <div class="room-card-address">
+                            <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ b.DiaChi }}
+                        </div>
+                        <div style="margin-bottom: 0.75rem;">
+                            <span class="badge badge-datcoc">Giữ phòng</span>
+                        </div>
+                        <div class="room-card-financials">
+                            <div class="financial-item">
+                                <span class="fin-label">Giá phòng</span>
+                                <strong class="fin-value">{{ "{:,.0f}".format(b.GiaThue * 1000)|replace(',', '.') }}đ</strong>
+                            </div>
+                            <div class="financial-item">
+                                <span class="fin-label">Tiền cọc trước</span>
+                                <strong class="fin-value" style="color: var(--warning);">{{ "{:,.0f}".format(b.TienCoc * 1000)|replace(',', '.') }}đ</strong>
+                            </div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.015); border: 1px solid rgba(15, 23, 42, 0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; margin-bottom: 0.75rem;">
+                            <div style="margin-bottom: 0.25rem;">
+                                <strong>Khách hàng:</strong> {{ b.TenKhach }} 
+                                (<a href="tel:{{ b.SoDienThoaiKhach }}" style="text-decoration: none; color: var(--accent);"><i class="fa-solid fa-phone"></i> {{ b.SoDienThoaiKhach }}</a>)
+                            </div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Ngày chốt:</strong> {{ b.NgayChot }}</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Dự kiến vào:</strong> {{ b.NgayDuKienVaoO }}</div>
+                            <div><strong>Điện đầu vào:</strong> {{ b.SoDienDauVao }} kWh</div>
+                            {% if b.GhiChu %}
+                                <div style="border-top: 1px dashed rgba(15, 23, 42, 0.05); padding-top: 0.4rem; margin-top: 0.4rem; font-style: italic; color: var(--text-secondary);">
+                                    <i class="fa-solid fa-comment-dots"></i> {{ b.GhiChu }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="room-card-action">
+                            <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-block" style="background: #e2e8f0; border-color: #cbd5e1;">
+                                <i class="fa-solid fa-pen-to-square"></i> Sửa cọc
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Bạn chưa có phiếu chốt cọc nào.</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -88,7 +143,9 @@
 <div class="tab-content" id="tab-contracts" style="display: none;">
     <div class="card">
         <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-file-circle-check"></i> Danh sách hợp đồng thuê đã ký</h3>
-        <div class="table-responsive">
+        
+        <!-- DESKTOP VIEW -->
+        <div class="table-responsive desktop-only">
             <table class="table" style="font-size: 0.9rem;">
                 <thead>
                     <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
@@ -138,6 +195,56 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- MOBILE VIEW -->
+        <div class="mobile-only">
+            <div class="room-cards-list">
+                {% if contracts %}
+                    {% for c in contracts %}
+                    <div class="room-card">
+                        <div class="room-card-header">
+                            <span class="room-card-area">{{ c.KhuVuc }}</span>
+                            <span class="room-card-number">Phòng {{ c.SoPhong }}</span>
+                        </div>
+                        <div class="room-card-address">
+                            <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ c.DiaChi }}
+                        </div>
+                        <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                            <code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code>
+                            <span class="badge {% if c.TrangThai == 'Đang kích hoạt' %}badge-trong{% else %}badge-secondary{% endif %}">
+                                {% if c.TrangThai == 'Đang kích hoạt' %}
+                                    Đang hiệu lực
+                                {% else %}
+                                    Hết hạn
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="room-card-financials">
+                            <div class="financial-item">
+                                <span class="fin-label">Giá thuê</span>
+                                <strong class="fin-value">{{ "{:,.0f}".format(c.GiaThue * 1000)|replace(',', '.') }}đ</strong>
+                            </div>
+                            <div class="financial-item">
+                                <span class="fin-label">Tiền cọc HĐ</span>
+                                <strong class="fin-value" style="color: var(--warning-text);">{{ "{:,.0f}".format(c.TienCoc * 1000)|replace(',', '.') }}đ</strong>
+                            </div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.015); border: 1px solid rgba(15, 23, 42, 0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem;">
+                            <div style="margin-bottom: 0.25rem;">
+                                <strong>Khách thuê:</strong> {{ c.TenKhach }} 
+                                (<a href="tel:{{ c.SoDienThoai }}" style="text-decoration: none; color: var(--accent);"><i class="fa-solid fa-phone"></i> {{ c.SoDienThoai }}</a>)
+                            </div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Thời hạn:</strong> {{ c.ThoiHanThue }} tháng</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Bắt đầu:</strong> {{ c.NgayBatDau }}</div>
+                            <div><strong>Kết thúc:</strong> {{ c.NgayKetThuc }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Chưa có hợp đồng nào được ký kết.</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -145,7 +252,9 @@
 <div class="tab-content" id="tab-tenants" style="display: none;">
     <div class="card">
         <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-users-viewfinder"></i> Danh sách khách hàng của bạn</h3>
-        <div class="table-responsive">
+        
+        <!-- DESKTOP VIEW -->
+        <div class="table-responsive desktop-only">
             <table class="table" style="font-size: 0.9rem;">
                 <thead>
                     <tr style="background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07));">
@@ -186,6 +295,39 @@
                     {% endif %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- MOBILE VIEW -->
+        <div class="mobile-only">
+            <div class="room-cards-list">
+                {% if tenants %}
+                    {% for t in tenants %}
+                    <div class="room-card">
+                        <div class="room-card-header">
+                            <span class="room-card-number" style="font-size: 1.2rem;">{{ t.HoTen }}</span>
+                            {% if t.TrangThaiHopDong == 'Giữ phòng' %}
+                                <span class="badge badge-datcoc">Giữ phòng {{ t.SoPhong }}</span>
+                            {% elif t.TrangThaiHopDong == 'Đang kích hoạt' %}
+                                <span class="badge badge-dangthue">Phòng {{ t.SoPhong }}</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Bỏ cọc / Rời đi</span>
+                            {% endif %}
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.015); border: 1px solid rgba(15, 23, 42, 0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                            <div style="margin-bottom: 0.25rem;">
+                                <strong>Điện thoại:</strong> 
+                                <a href="tel:{{ t.SoDienThoai }}" style="text-decoration: none; color: var(--accent);"><i class="fa-solid fa-phone"></i> {{ t.SoDienThoai }}</a>
+                            </div>
+                            <div style="margin-bottom: 0.25rem;"><strong>CCCD:</strong> {{ t.CCCD if t.CCCD else '-' }}</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Địa chỉ nhà:</strong> {{ t.DiaChiRoom }}</div>
+                            <div><strong>Hợp đồng:</strong> <code>HĐ-{{ "%03d"|format(t.MaHopDong) }}</code></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Không tìm thấy hồ sơ khách thuê nào.</div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

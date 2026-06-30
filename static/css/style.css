@@ -821,3 +821,218 @@ footer {
         gap: 1rem;
     }
 }
+
+/* ==========================================================================
+   Custom Responsive Cards for Sale Module
+   ========================================================================== */
+@media (min-width: 769px) {
+    .desktop-only { display: block; }
+    .mobile-only { display: none; }
+}
+
+@media (max-width: 768px) {
+    .desktop-only { display: none; }
+    .mobile-only { display: block; }
+    
+    /* Search & Filter cards responsive overrides */
+    .search-filter-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        min-width: 0 !important;
+        gap: 0.75rem !important;
+        padding: 0.75rem !important;
+    }
+    .search-filter-container > div, 
+    .search-filter-container select,
+    .search-filter-container input {
+        width: 100% !important;
+    }
+    
+    .kpi-container-card {
+        min-width: 0 !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Mobile Cards Layout */
+    .room-cards-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .room-card {
+        background: var(--bg-glass);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        box-shadow: var(--box-shadow);
+        transition: var(--transition);
+        margin-bottom: 0.5rem;
+    }
+    
+    .room-card:hover {
+        border-color: rgba(2, 132, 199, 0.18);
+        box-shadow: var(--box-shadow-hover);
+        transform: translateY(-1px);
+    }
+    
+    .room-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .room-card-area {
+        background: var(--accent-light);
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        border: 1px solid rgba(2, 132, 199, 0.15);
+    }
+    
+    .room-card-number {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+    
+    .room-card-address {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .room-card-financials {
+        display: flex;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.02);
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        border: 1px solid rgba(15, 23, 42, 0.03);
+    }
+    
+    .financial-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .fin-label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 0.15rem;
+    }
+    
+    .fin-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .commission-value {
+        color: var(--success) !important;
+    }
+    
+    .room-card-details {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+        padding: 0.25rem 0;
+    }
+    
+    .room-card-details > div {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .room-card-details .devices-list, 
+    .room-card-details .room-card-note {
+        grid-column: span 2;
+        border-top: 1px dashed rgba(15, 23, 42, 0.06);
+        padding-top: 0.4rem;
+        margin-top: 0.15rem;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+    
+    .room-card-action {
+        margin-top: 0.5rem;
+    }
+    
+    .room-card-action .btn-block {
+        width: 100%;
+        padding: 0.7rem;
+        font-size: 0.95rem;
+    }
+    
+    /* Responsive Tabs */
+    .tab-btn {
+        padding: 0.5rem 0.85rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Compact KPI overrides for mobile */
+    .kpi-container-card {
+        padding: 0.5rem 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    .kpi-container-card .kpi-title {
+        font-size: 0.85rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .kpi-container-card .kpi-progress-text {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    .kpi-container-card .kpi-progress-bar {
+        height: 6px !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .kpi-container-card .kpi-status-text span {
+        font-size: 0.75rem !important;
+    }
+
+    /* Compact Form Spacing for mobile */
+    .form-group {
+        margin-bottom: 0.75rem !important;
+    }
+    .form-control {
+        padding: 0.55rem 0.85rem !important;
+        font-size: 0.9rem !important;
+    }
+    .form-label {
+        font-size: 0.85rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+    .card h3 {
+        font-size: 1.15rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Toggleable mobile filters dropdown */
+    .filters-dropdown-group {
+        display: none !important;
+    }
+    .filters-dropdown-group.active {
+        display: flex !important;
+        margin-top: 0.5rem;
+    }
+}
