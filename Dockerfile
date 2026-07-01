@@ -19,5 +19,5 @@ COPY . /app/
 # Mở cổng 5000 cho Flask
 EXPOSE 5000
 
-# Lệnh khởi chạy server khi container lên
-CMD ["python", "app.py"]
+# Lệnh khởi chạy server bằng gunicorn (Production-ready)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
