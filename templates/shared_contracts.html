@@ -42,7 +42,7 @@
                         <td>{{ c.NgayBatDau }}</td>
                         <td>{{ c.NgayKetThuc }}</td>
                         <td>{{ c.ThoiHanThue }} tháng</td>
-                        <td style="font-weight: 700; color: var(--warning-text);">{{ "{:,.0f}".format(c.GiaThue) }}</td>
+                        <td style="font-weight: 700; color: var(--accent);">{{ c.GiaThue | format_vnd }}</td>
                         <td>
                             {% if c.TrangThai == 'Đang kích hoạt' %}
                                 <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hiệu lực</span>

@@ -1,21 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Admin - QL Bất Động Sản{% endblock %}
+{% block title %}Dashboard Báo Cáo & Thống Kê - QL Bất Động Sản{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title"><i class="fa-solid fa-square-poll-vertical" style="color: var(--accent);"></i> Dashboard Quản Trị Tối Cao</h1>
-        <span style="font-size: 0.95rem; color: var(--text-secondary);">Thống kê tài chính vĩ mô và tỷ lệ lấp đầy tài sản</span>
+        <h1 class="page-title"><i class="fa-solid fa-square-poll-vertical" style="color: var(--accent);"></i> Dashboard Báo Cáo & Thống Kê</h1>
     </div>
-    <div style="display: flex; gap: 0.5rem;">
-        <a href="{{ url_for('manager_expenses') }}" class="btn btn-warning btn-sm" style="background: var(--warning); color: #fff; border: none;">
-            <i class="fa-solid fa-file-invoice-dollar"></i> Quản lý Chi Phí
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <a href="{{ url_for('manager_expenses') }}" class="btn" style="background: #ffffff; border: 1px solid #cbd5e1; color: #334155; font-weight: 600; font-size: 0.84rem; padding: 0.45rem 0.85rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); text-decoration: none;">
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #0284c7;"></i> Quản lý Chi Phí
         </a>
-        <a href="{{ url_for('admin_config') }}" class="btn btn-secondary btn-sm">
-            <i class="fa-solid fa-gears"></i> Cấu hình đơn giá
-        </a>
+        <button type="button" onclick="document.getElementById('announcement-form').style.display='block';" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; font-weight: 600; font-size: 0.84rem; padding: 0.45rem 0.95rem; border-radius: 8px; border: none; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer;">
+            <i class="fa-solid fa-bullhorn"></i> Đăng thông báo
+        </button>
     </div>
+</div>
+
+<div class="card" id="announcement-form" style="display: none; border-left: 4px solid var(--accent); margin-bottom: 1.5rem; background: #f0f9ff; padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h4 style="margin: 0; color: #0369a1; font-size: 0.95rem;"><i class="fa-solid fa-bullhorn"></i> Phát thông báo nội bộ cho Quản lý & Sale</h4>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('announcement-form').style.display='none';">&times; Đóng</button>
+    </div>
+    
+    {% if latest_thong_bao and latest_thong_bao.NoiDung %}
+    <div style="background: white; border: 1px dashed #0284c7; border-radius: 6px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <span style="font-size: 0.8rem; color: #0369a1; font-weight: 700;">ĐANG PHÁT:</span>
+            <span style="font-size: 0.9rem; color: #1e293b; font-weight: 500;">"{{ latest_thong_bao.NoiDung }}"</span>
+        </div>
+        <form action="{{ url_for('admin_thong_bao_tat') }}" method="POST" style="margin: 0;">
+            <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" title="Tắt thông báo này">
+                <i class="fa-solid fa-volume-xmark"></i> Tắt thông báo
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('admin_thong_bao') }}" method="POST" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <input type="text" name="noidung" class="form-control" placeholder="Nhập nội dung mới (ví dụ: Nghỉ lễ 2/9, thưởng nóng chốt phòng...)" required style="flex: 1; min-width: 250px;">
+        <button type="submit" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; font-weight: 600; border: none; border-radius: 8px; padding: 0.45rem 1rem; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> Phát thông báo ngay</button>
+    </form>
 </div>
 
 <!-- Khối số liệu tài chính nhanh -->
@@ -224,7 +249,7 @@ new Chart(ctxOccupancy, {
                 position: 'bottom',
                 labels: {
                     color: '#475569',
-                    font: { family: 'Outfit', weight: 'bold' },
+                    font: { family: 'Be Vietnam Pro', weight: 'bold' },
                     padding: 15
                 }
             }

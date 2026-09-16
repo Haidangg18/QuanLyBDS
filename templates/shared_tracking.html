@@ -3,9 +3,17 @@
 {% block title %}Bảng Theo Dõi Chung - QL Bất Động Sản{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title"><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> BẢNG THEO DÕI HỆ THỐNG</h1>
-    <span style="font-size: 0.95rem; color: var(--text-secondary);">Cập nhật ngày {{ current_date }}</span>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> BẢNG THEO DÕI HỆ THỐNG</h1>
+    </div>
+    {% if session.get('role_id') == 1 %}
+    <div>
+        <a href="{{ url_for('admin_config') }}" class="btn" style="background: #ffffff; border: 1px solid #cbd5e1; color: #334155; font-weight: 600; font-size: 0.84rem; padding: 0.45rem 0.85rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); text-decoration: none;">
+            <i class="fa-solid fa-gear" style="color: #0284c7;"></i> Cấu hình Đơn giá & KPI
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Hệ thống Tab điều hướng -->
@@ -78,7 +86,10 @@
 
     <!-- Bảng phòng trống -->
     <div class="card">
-        <h3 style="margin-bottom: 1.25rem; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="margin-bottom: 0; color: var(--accent);"><i class="fa-solid fa-hotel"></i> Danh sách phòng trống</h3>
+            <span style="font-size: 0.88rem; color: var(--text-secondary);"><i class="fa-regular fa-clock"></i> Cập nhật ngày {{ current_date }}</span>
+        </div>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -106,7 +117,7 @@
                             <td style="text-align: center;">{{ loop.index }}</td>
                             <td>{{ r.DiaChi }}</td>
                             <td><span class="badge badge-trong" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
-                            <td style="font-weight: 700;">{{ "{:,.2f}".format(r.GiaThue) }}</td>
+                            <td style="font-weight: 700; color: var(--accent);">{{ r.GiaThue | format_vnd }}</td>
                             <td>{{ r.GhiChu if r.GhiChu else '-' }}</td>
                             <td>
                                 {% if r.ThietBi %}
@@ -117,7 +128,7 @@
                             </td>
                             <td><strong>{{ r.TenNhanVienChotCu if r.TenNhanVienChotCu else '-' }}</strong></td>
                             <td>{{ r.NgayTrong if r.NgayTrong else '-' }}</td>
-                            <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(r.HoaHong) }}</td>
+                            <td style="color: var(--success); font-weight: 700;">{{ r.HoaHong | format_vnd }}</td>
                             {% if session.get('role_id') in [1, 2] %}
                                 <td style="text-align: center;">
                                     <div style="display: flex; gap: 0.25rem; justify-content: center;">
@@ -197,8 +208,8 @@
                             {% endif %}
                             <td>{{ b.NgayChot }}</td>
                             <td>{{ b.DiaChi }}</td>
-                            <td style="font-weight: 700;">{{ "{:,.2f}".format(b.GiaThue) }}</td>
-                            <td style="font-weight: 700; color: var(--warning);">{{ "{:,.2f}".format(b.TienCoc) }}</td>
+                            <td style="font-weight: 700; color: var(--accent);">{{ b.GiaThue | format_vnd }}</td>
+                            <td style="font-weight: 700; color: var(--warning);">{{ b.TienCoc | format_vnd }}</td>
                             <td style="font-size: 0.8rem; color: var(--text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ b.GhiChu }}">
                                 {{ b.GhiChu if b.GhiChu else '-' }}
                             </td>
@@ -212,7 +223,7 @@
                                     <span class="badge badge-chuathanhtoan"><i class="fa-solid fa-file-circle-xmark"></i> Đang cọc</span>
                                 {% endif %}
                             </td>
-                            <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(b.HoaHongTaiSan) }}</td>
+                            <td style="color: var(--success); font-weight: 700;">{{ b.HoaHongTaiSan | format_vnd }}</td>
                             <td>{{ b.SoDienDauVao }} kWh</td>
                         </tr>
                         {% endfor %}
@@ -264,7 +275,14 @@
     </div>
 
     <div class="card" style="margin-bottom: 1rem;">
-        <h3 style="color: var(--success); margin-bottom: 1rem;"><i class="fa-solid fa-money-check-dollar"></i> Bảng Lương Sale chi tiết (Tháng {{ current_month }}/{{ current_year }})</h3>
+        <h3 style="color: var(--success); margin-bottom: 1rem;">
+            <i class="fa-solid fa-money-check-dollar"></i> 
+            {% if session.get('role_id') == 3 %}
+                Bảng Thu Nhập & KPI Cá Nhân (Tháng {{ current_month }}/{{ current_year }})
+            {% else %}
+                Bảng Lương Sale chi tiết (Tháng {{ current_month }}/{{ current_year }})
+            {% endif %}
+        </h3>
         <div class="table-responsive">
             <table class="table">
                 <thead>

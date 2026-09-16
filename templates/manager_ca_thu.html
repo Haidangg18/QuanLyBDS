@@ -28,10 +28,10 @@
             <tbody>
                 {% if rooms %}
                     {% for room in rooms %}
-                    <tr>
+                    <tr {% if room.HasOverdue %}style="background-color: #fef2f2;" title="Phòng đang nợ tiền hóa đơn!"{% endif %}>
                         <td>{{ loop.index }}</td>
                         <td>{{ room.DiaChi }} ({{ room.KhuVuc }})</td>
-                        <td><span class="badge {% if room.TrangThai == 'Trong' %}badge-trong{% elif room.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}">Phòng {{ room.SoPhong }}</span></td>
+                        <td><span class="badge {% if room.TrangThai == 'Trong' %}badge-trong{% elif room.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}" {% if room.HasOverdue %}style="background-color: #dc2626;"{% endif %}>Phòng {{ room.SoPhong }} {% if room.HasOverdue %}⚠️{% endif %}</span></td>
                         <td style="font-weight: 600; color: #fff;">{{ "{:,.2f}".format(room.GiaThue) }}</td>
                         <td>
                             {% if room.TienCocChot %}

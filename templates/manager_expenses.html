@@ -5,7 +5,11 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title"><i class="fa-solid fa-file-invoice-dollar"></i> Quản Lý Chi Phí</h1>
-    <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+    {% if session.get('role_id') == 1 %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+    {% else %}
+        <a href="{{ url_for('shared_tracking') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Quản lý phòng</a>
+    {% endif %}
 </div>
 
 <div class="layout-split" style="grid-template-columns: 1fr 1fr;">

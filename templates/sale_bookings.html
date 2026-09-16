@@ -60,8 +60,8 @@
                             <td>{{ b.NgayChot }}</td>
                             <td>{{ b.NgayDuKienVaoO }}</td>
                             <td>{{ b.DiaChi }} ({{ b.KhuVuc }})</td>
-                            <td style="font-weight: 700;">{{ "{:,.2f}".format(b.GiaThue) }}</td>
-                            <td style="font-weight: 700; color: var(--warning);">{{ "{:,.2f}".format(b.TienCoc) }}</td>
+                            <td style="font-weight: 700; color: var(--accent);">{{ b.GiaThue | format_vnd }}</td>
+                            <td style="font-weight: 700; color: var(--warning);">{{ b.TienCoc | format_vnd }}</td>
                             <td><strong>{{ b.TenKhach }}</strong></td>
                             <td>{{ b.SoDienThoaiKhach }}</td>
                             <td>{{ b.SoDienDauVao }} kWh</td>
@@ -175,7 +175,7 @@
                             <td>{{ c.NgayBatDau }}</td>
                             <td>{{ c.NgayKetThuc }}</td>
                             <td>{{ c.ThoiHanThue }} tháng</td>
-                            <td style="font-weight: 700; color: var(--warning-text);">{{ "{:,.2f}".format(c.TienCoc) }}</td>
+                            <td style="font-weight: 700; color: var(--warning-text);">{{ c.TienCoc | format_vnd }}</td>
                             <td>
                                 {% if c.TrangThai == 'Đang kích hoạt' %}
                                     <span class="badge badge-trong"><i class="fa-solid fa-circle-check"></i> Đang hiệu lực</span>

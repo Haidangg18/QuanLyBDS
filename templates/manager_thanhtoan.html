@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Quản Lý Thanh Toán Theo Ca - Bất Động Sản Đăng Vy{% endblock %}
+{% block title %}Quản Lý Thanh Toán Theo Ca & Tòa Nhà - QL Bất Động Sản{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title"><i class="fa-solid fa-credit-card" style="color: var(--accent);"></i> QUẢN LÝ THANH TOÁN & ĐIỆN NƯỚC</h1>
-    <span style="font-size: 0.95rem; color: var(--text-secondary);">Phân nhóm theo Ca thu và Từng toà nhà</span>
+    <div>
+        <h1 class="page-title" style="margin-bottom: 0;"><i class="fa-solid fa-credit-card" style="color: var(--accent);"></i> QUẢN LÝ THANH TOÁN & ĐIỆN NƯỚC</h1>
+    </div>
 </div>
 
 <!-- Hệ thống Tab chọn Ca Thu -->
@@ -22,108 +23,134 @@
 <!-- Nội dung cho từng Ca Thu -->
 {% for day, houses in shifts.items() %}
 <div class="ca-content-section" id="ca-content-{{ day }}" style="{% if not loop.first %}display: none;{% endif %}">
-    <div class="card" style="background: linear-gradient(135deg, rgba(2,132,199,0.05) 0%, rgba(16,185,129,0.02) 100%); border: 1px solid rgba(2,132,199,0.1); padding: 1.25rem; margin-bottom: 1.5rem;">
-        <h2 style="font-weight: 700; color: var(--accent); margin: 0; font-size: 1.25rem;">
-            <i class="fa-solid fa-clock"></i> Danh sách nhà thuộc Ca Mùng {{ day }} hàng tháng
+    <div class="card" style="background: linear-gradient(135deg, rgba(2,132,199,0.05) 0%, rgba(16,185,129,0.02) 100%); border: 1px solid rgba(2,132,199,0.1); padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+        <h2 style="font-weight: 700; color: var(--accent); margin: 0; font-size: 1.15rem; display: flex; align-items: center; justify-content: space-between;">
+            <span><i class="fa-solid fa-clock"></i> Các tòa nhà thuộc Ca Mùng {{ day }}</span>
+            <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Nhấn vào tòa nhà để mở/đóng danh sách phòng</span>
         </h2>
     </div>
 
     {% if houses %}
-        {% for address, rooms in houses.items() %}
-        <div class="card" style="margin-bottom: 2rem;">
-            <!-- Tiêu đề Toà nhà -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                <h3 style="color: var(--text-primary); margin: 0; font-size: 1.15rem; font-weight: 700;">
-                    <i class="fa-solid fa-building" style="color: var(--accent); margin-right: 0.5rem;"></i> {{ address }}
-                </h3>
-                <span class="badge badge-info" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-                    {{ rooms|length }} phòng
-                </span>
+        {% for address, house_info in houses.items() %}
+        {% set house_id = loop.index ~ '-' ~ day %}
+        <div class="card" style="margin-bottom: 1rem; border-left: 4px solid {% if house_info.has_overdue %}#ef4444{% else %}var(--accent){% endif %}; transition: all 0.2s ease;">
+            <!-- Tiêu đề Tòa nhà (Click để bật/tắt danh sách phòng) -->
+            <div onclick="toggleHouseRooms('house-rooms-{{ house_id }}', 'house-icon-{{ house_id }}')" 
+                 style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 0.25rem 0.25rem; user-select: none;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fa-solid fa-chevron-right" id="house-icon-{{ house_id }}" style="color: var(--text-secondary); transition: transform 0.2s;"></i>
+                    <h3 style="color: var(--text-primary); margin: 0; font-size: 1.08rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-building" style="color: var(--accent);"></i> {{ address }}
+                    </h3>
+                    {% if house_info.has_overdue %}
+                        <span class="badge" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> CÓ PHÒNG NỢ QUÁ HẠN ⚠️
+                        </span>
+                    {% endif %}
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="badge badge-info" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                        {{ house_info.rooms|length }} phòng
+                    </span>
+                    <span style="font-size: 0.82rem; color: var(--accent); font-weight: 600;">Xem phòng <i class="fa-solid fa-arrows-up-down"></i></span>
+                </div>
             </div>
 
-            <!-- Bảng danh sách phòng của Toà nhà -->
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr style="background-color: #f8fafc;">
-                            <th style="width: 100px;">Phòng</th>
-                            <th style="width: 120px;">Tầng</th>
-                            <th style="width: 150px;">Giá thuê (VND)</th>
-                            <th style="width: 150px;">Trạng thái</th>
-                            <th>Khách hàng</th>
-                            <th>Liên hệ</th>
-                            <th style="text-align: center; width: 220px;">Xử lý nghiệp vụ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for r in rooms %}
-                        <tr>
-                            <td>
-                                <span class="badge {% if r.TrangThai == 'Trong' %}badge-trong{% elif r.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
-                                    {% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}
-                                </span>
-                            </td>
-                            <td>Tầng {{ r.Tang }}</td>
-                            <td style="font-weight: 700; color: var(--text-primary);">
-                                {{ "{:,.2f}".format(r.GiaThue) }}
-                            </td>
-                            <td>
-                                {% if r.TrangThai == 'Trong' %}
-                                    <span class="badge badge-trong"><i class="fa-solid fa-circle-dot"></i> Trống</span>
-                                {% elif r.TrangThai == 'Giữ phòng' %}
-                                    <span class="badge badge-datcoc"><i class="fa-solid fa-clock"></i> Giữ phòng</span>
-                                {% elif r.TrangThai == 'DangThue' %}
-                                    <span class="badge badge-dangthue"><i class="fa-solid fa-user-lock"></i> Đang thuê</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">{{ r.TrangThai }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if r.TrangThai == 'DangThue' %}
-                                    <strong>{{ r.TenKhachThue }}</strong>
-                                {% elif r.TrangThai == 'Giữ phòng' %}
-                                    <strong style="color: var(--warning-text);">{{ r.TenKhachChot }} (Đặt chỗ)</strong>
-                                {% else %}
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if r.TrangThai == 'DangThue' %}
-                                    {{ r.SdtKhachThue }}
-                                {% elif r.TrangThai == 'Giữ phòng' %}
-                                    {{ r.SdtKhachChot }}
-                                {% else %}
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
-                                {% endif %}
-                            </td>
-                            <td style="text-align: center;">
-                                {% if r.TrangThai == 'DangThue' %}
-                                    {% if session.get('role_id') == 1 %}
-                                        <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn btn-success btn-sm" style="width: 100%;">
-                                            <i class="fa-solid fa-file-invoice-dollar"></i> Xem hóa đơn
+            <!-- Bảng danh sách phòng (Mặc định ẨN, nhấn vào tòa nhà mới hiện ra) -->
+            <div id="house-rooms-{{ house_id }}" style="display: none; margin-top: 1.25rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr style="background-color: #f8fafc;">
+                                <th style="width: 130px;">Phòng</th>
+                                <th style="width: 100px;">Tầng</th>
+                                <th style="width: 150px;">Giá thuê (VND)</th>
+                                <th style="width: 160px;">Trạng thái</th>
+                                <th>Khách hàng</th>
+                                <th>Liên hệ</th>
+                                <th style="text-align: center; width: 220px;">Xử lý nghiệp vụ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in house_info.rooms %}
+                            <tr {% if r.HasOverdue %}style="background-color: #fef2f2; border-left: 4px solid #ef4444;" title="Phòng đang nợ tiền nhà quá hạn!"{% endif %}>
+                                <td>
+                                    {% if r.HasOverdue %}
+                                        <span class="badge" style="background-color: #dc2626; color: #ffffff; font-weight: 700; padding: 0.4rem 0.6rem; font-size: 0.85rem;" title="Phòng quá hạn chưa nộp tiền nhà!">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> {{ r.SoPhong }} ⚠️ NỢ
+                                        </span>
+                                    {% else %}
+                                        <span class="badge {% if r.TrangThai == 'Trong' %}badge-trong{% elif r.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                                            {% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>Tầng {{ r.Tang }}</td>
+                                <td style="font-weight: 700; color: {% if r.HasOverdue %}#dc2626{% else %}var(--text-primary){% endif %};">
+                                    {{ r.GiaThue | format_vnd }}
+                                </td>
+                                <td>
+                                    {% if r.HasOverdue %}
+                                        <span class="badge" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-weight: 700;">
+                                            <i class="fa-solid fa-circle-exclamation"></i> Nợ quá hạn
+                                        </span>
+                                    {% elif r.TrangThai == 'Trong' %}
+                                        <span class="badge badge-trong"><i class="fa-solid fa-circle-dot"></i> Trống</span>
+                                    {% elif r.TrangThai == 'Giữ phòng' %}
+                                        <span class="badge badge-datcoc"><i class="fa-solid fa-clock"></i> Giữ phòng</span>
+                                    {% elif r.TrangThai == 'DangThue' %}
+                                        <span class="badge badge-dangthue"><i class="fa-solid fa-user-lock"></i> Đang thuê</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ r.TrangThai }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.TrangThai == 'DangThue' %}
+                                        <strong>{{ r.TenKhachThue or 'Khách thuê' }}</strong>
+                                    {% elif r.TrangThai == 'Giữ phòng' %}
+                                        <strong style="color: var(--warning-text);">{{ r.TenKhachChot }} (Đặt chỗ)</strong>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.TrangThai == 'DangThue' %}
+                                        {{ r.SdtKhachThue or '-' }}
+                                    {% elif r.TrangThai == 'Giữ phòng' %}
+                                        {{ r.SdtKhachChot or '-' }}
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    {% if r.TrangThai == 'DangThue' or r.HasOverdue %}
+                                        {% if session.get('role_id') == 1 %}
+                                            <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn {% if r.HasOverdue %}btn-danger{% else %}btn-success{% endif %} btn-sm" style="width: 100%;">
+                                                <i class="fa-solid fa-file-invoice-dollar"></i> Xem hóa đơn {% if r.HasOverdue %}(Nợ){% endif %}
+                                            </a>
+                                        {% else %}
+                                            <div style="display: flex; gap: 0.25rem; flex-direction: column;">
+                                                <a href="{{ url_for('manager_dien_nuoc_form', room_id=r.MaTaiSan) }}" class="btn btn-info btn-sm" style="width: 100%;">
+                                                    <i class="fa-solid fa-calculator"></i> Ghi điện nước
+                                                </a>
+                                                <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn {% if r.HasOverdue %}btn-danger{% else %}btn-secondary{% endif %} btn-sm" style="width: 100%;">
+                                                    <i class="fa-solid fa-clock-rotate-left"></i> {% if r.HasOverdue %}Nhắc nợ / HĐ{% else %}Lịch sử HĐ{% endif %}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    {% elif r.TrangThai == 'Giữ phòng' %}
+                                        <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn btn-info btn-sm" style="width: 100%;">
+                                            <i class="fa-solid fa-file-invoice-dollar"></i> Xem hóa đơn cọc/nhà
                                         </a>
                                     {% else %}
-                                        <div style="display: flex; gap: 0.25rem; flex-direction: column;">
-                                            <a href="{{ url_for('manager_dien_nuoc_form', room_id=r.MaTaiSan) }}" class="btn btn-info btn-sm" style="width: 100%;">
-                                                <i class="fa-solid fa-calculator"></i> Ghi điện nước
-                                            </a>
-                                            <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn btn-secondary btn-sm" style="width: 100%;">
-                                                <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử HĐ
-                                            </a>
-                                        </div>
+                                        <span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Chờ sale chốt khách</span>
                                     {% endif %}
-                                {% elif r.TrangThai == 'Giữ phòng' %}
-                                    <a href="{{ url_for('shared_invoices', room_id=r.MaTaiSan) }}" class="btn btn-info btn-sm" style="width: 100%;">
-                                        <i class="fa-solid fa-file-invoice-dollar"></i> Xem hóa đơn cọc/nhà
-                                    </a>
-                                {% else %}
-                                    <span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Chờ sale chốt khách</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -140,21 +167,32 @@
 {% block scripts %}
 <script>
 function switchCaTab(day) {
-    // Ẩn tất cả các phần nội dung ca thu
     const sections = document.getElementsByClassName('ca-content-section');
     for (let i = 0; i < sections.length; i++) {
         sections[i].style.display = 'none';
     }
     
-    // Xoá class active ở tất cả các nút
     const buttons = document.getElementsByClassName('tab-btn');
     for (let i = 0; i < buttons.length; i++) {
         buttons[i].classList.remove('active');
     }
     
-    // Hiển thị phần được chọn và kích hoạt nút tương ứng
     document.getElementById('ca-content-' + day).style.display = 'block';
     document.getElementById('tab-ca-' + day + '-btn').classList.add('active');
+}
+
+function toggleHouseRooms(containerId, iconId) {
+    const el = document.getElementById(containerId);
+    const icon = document.getElementById(iconId);
+    if (!el) return;
+    
+    if (el.style.display === 'none' || el.style.display === '') {
+        el.style.display = 'block';
+        if (icon) icon.style.transform = 'rotate(90deg)';
+    } else {
+        el.style.display = 'none';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
 }
 </script>
 {% endblock %}

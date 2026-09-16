@@ -8,13 +8,12 @@
     <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
 </div>
 
-<div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
-    <button class="btn btn-primary" onclick="toggleAddForm()"><i class="fa-solid fa-user-plus"></i> Thêm nhân sự mới</button>
-</div>
-
 <!-- Form thêm mới tài khoản ở phía trên -->
-<div class="card" id="add-employee-card" style="display: none; margin-bottom: 1.5rem;">
-    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-user-plus"></i> Tạo tài khoản nhân sự mới</h3>
+<div class="card" id="add-employee-card" style="display: none; margin-bottom: 1.5rem; border-left: 4px solid var(--accent); background: #f8fafc;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <h3 style="margin: 0; color: var(--accent);"><i class="fa-solid fa-user-plus"></i> Tạo tài khoản nhân sự mới</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAddForm()">&times; Đóng</button>
+    </div>
     <form action="{{ url_for('admin_employees') }}" method="POST">
         <div class="form-row">
             <div class="form-col form-group">
@@ -63,7 +62,12 @@
 
 <!-- Bảng danh sách tài khoản ở phía dưới -->
 <div class="card">
-    <h3 style="margin-bottom: 1.25rem;"><i class="fa-solid fa-list-ul"></i> Danh sách tài khoản trong hệ thống</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <h3 style="margin: 0;"><i class="fa-solid fa-list-ul"></i> Danh sách tài khoản trong hệ thống</h3>
+        <button class="btn btn-primary btn-sm" onclick="toggleAddForm()" style="padding: 0.45rem 0.9rem; font-weight: 600;">
+            <i class="fa-solid fa-user-plus"></i> Thêm nhân sự mới
+        </button>
+    </div>
     <div class="table-responsive">
         <table class="table">
             <thead>
@@ -99,7 +103,7 @@
                             {% if u.MaVaiTro == 1 %}
                                 -
                             {% else %}
-                                {{ "{:,.0f}".format(u.LuongCung) }} đ
+                                {{ u.LuongCung | format_vnd }}
                             {% endif %}
                         </td>
                         <td>
