@@ -16,6 +16,7 @@ def get_db():
     return conn
 
 import json
+
 def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, ghi_chu=None):
     if 'user_id' not in session: return
     try:
@@ -29,8 +30,11 @@ def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, g
             except Exception:
                 return str(d)
 
-        old_json = json.dumps(convert_dict(du_lieu_cu), ensure_ascii=False) if du_lieu_cu is not None else None
-        new_json = json.dumps(convert_dict(du_lieu_moi), ensure_ascii=False) if du_lieu_moi is not None else None
+        old_d = convert_dict(du_lieu_cu)
+        new_d = convert_dict(du_lieu_moi)
+        
+        old_json = json.dumps(old_d, ensure_ascii=False) if old_d is not None else None
+        new_json = json.dumps(new_d, ensure_ascii=False) if new_d is not None else None
         
         db.execute(
             "INSERT INTO AUDIT_LOG (MaTaiKhoan, HoTen, HanhDong, BangBiTacDong, DuLieuCu, DuLieuMoi, GhiChu) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -75,11 +79,14 @@ def add_months(sourcedate, months):
 def inject_thong_bao():
     try:
         db = get_db()
-        tb = db.execute("SELECT * FROM THONG_BAO WHERE TrangThai = 1 ORDER BY MaThongBao DESC LIMIT 1").fetchone()
+        tb_list = db.execute("SELECT * FROM THONG_BAO WHERE TrangThai = 1 ORDER BY IsGhim DESC, MaThongBao DESC LIMIT 20").fetchall()
+        recent_tb = [dict(t) for t in tb_list] if tb_list else []
+        latest_tb = recent_tb[0] if recent_tb else None
+        admin_pinned = db.execute("SELECT * FROM THONG_BAO WHERE TrangThai = 1 AND IsGhim = 1 ORDER BY MaThongBao DESC LIMIT 1").fetchone()
         db.close()
-        return dict(latest_thong_bao=dict(tb) if tb else None)
+        return dict(recent_thong_bao=recent_tb, latest_thong_bao=latest_tb, admin_pinned_thong_bao=dict(admin_pinned) if admin_pinned else None)
     except Exception:
-        return dict(latest_thong_bao=None)
+        return dict(recent_thong_bao=[], latest_thong_bao=None, admin_pinned_thong_bao=None)
 
 @app.before_request
 def check_contract_activation():
@@ -256,12 +263,6 @@ def login():
                 session['username'] = user['TenDangNhap']
                 session['fullname'] = user['HoTen']
                 session['role_id'] = user['MaVaiTro']
-                
-                # Ghi log Đăng nhập
-                db_log = get_db()
-                log_audit(db_log, 'Đăng nhập', 'HỆ THỐNG', ghi_chu=f'Đăng nhập từ IP: {request.remote_addr}')
-                db_log.commit()
-                db_log.close()
                 
                 flash(f"Chào mừng {user['HoTen']} đã đăng nhập thành công!", "success")
                 return redirect(url_for('index'))
@@ -565,6 +566,11 @@ def sale_chot_coc(room_id):
                 "UPDATE TAI_SAN SET TrangThai = 'Giữ phòng' WHERE MaTaiSan = ?", (room_id,)
             )
             
+            # 7. Tự động phát thông báo tức thì lên toàn hệ thống để các Sale khác không tư vấn trùng
+            sale_fullname = session.get('fullname', 'Sale')
+            msg_thong_bao = f"{sale_fullname}: Phòng {room['SoPhong']} {room['DiaChi']} chốt"
+            cursor.execute("INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim) VALUES (?, 1, 'CHOT', 0)", (msg_thong_bao,))
+            
             # Ghi Audit Log cho hành động chốt cọc của Sale
             new_booking_data = {
                 'MaTaiSan': room_id,
@@ -753,6 +759,67 @@ def sale_booking_edit(deal_id):
     db.close()
     return render_template('sale_booking_edit.html', deal=deal, room=room, gia_dv=gia_dv, contract=contract)
 
+@app.route('/sale/booking/cancel/<int:deal_id>', methods=['POST'])
+@role_required([3])
+def sale_booking_cancel(deal_id):
+    user_id = session['user_id']
+    db = get_db()
+    deal = db.execute(
+        "SELECT * FROM THONG_TIN_CHOT_KHACH WHERE MaChotKhach = ? AND MaTaiKhoanChot = ?",
+        (deal_id, user_id)
+    ).fetchone()
+    
+    if not deal:
+        db.close()
+        flash("Phiếu chốt khách không tồn tại hoặc không thuộc quyền quản lý của bạn!", "error")
+        return redirect(url_for('sale_bookings'))
+        
+    room = db.execute("SELECT * FROM TAI_SAN WHERE MaTaiSan = ?", (deal['MaTaiSan'],)).fetchone()
+    if not room:
+        db.close()
+        flash("Thông tin phòng không tồn tại!", "error")
+        return redirect(url_for('sale_bookings'))
+        
+    reason = request.form.get('reason', 'Khách đổi ý không thuê (bỏ cọc)')
+    
+    try:
+        # 1. Cập nhật hợp đồng liên quan (nếu có) thành 'Bỏ cọc'
+        if deal['MaHopDong']:
+            db.execute("UPDATE HOP_DONG SET TrangThai = 'Bỏ cọc' WHERE MaHopDong = ?", (deal['MaHopDong'],))
+            
+        # 2. Cập nhật trạng thái phiếu chốt thành 'Bo coc'
+        db.execute(
+            "UPDATE THONG_TIN_CHOT_KHACH SET TrangThai = 'Bo coc', GhiChu = ? WHERE MaChotKhach = ?",
+            (f"[BỎ CỌC] Lý do: {reason} | Ghi chú cũ: {deal['GhiChu'] or ''}", deal_id)
+        )
+        
+        # 3. Mở lại phòng về trạng thái 'Trong'
+        db.execute("UPDATE TAI_SAN SET TrangThai = 'Trong' WHERE MaTaiSan = ?", (deal['MaTaiSan'],))
+        
+        # 4. Tự động phát thông báo tức thì lên toàn hệ thống để các Sale khác biết ngay
+        msg_thong_bao = f"Phòng {room['SoPhong']} {room['DiaChi']} trống khách bỏ cọc"
+        db.execute("INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim) VALUES (?, 1, 'TRONG', 0)", (msg_thong_bao,))
+        
+        # 5. Ghi Audit Log và kích hoạt Động Cơ Phát Hiện Bất Thường Ngầm (CANC_01 đến CANC_04)
+        new_data = {
+            'MaChotKhach': deal_id,
+            'TrangThai': 'Bo coc',
+            'LyDoHuy': reason,
+            'TienCoc': deal['TienCoc'],
+            'NgayChot': deal['NgayChot'],
+            'ThoiGianHuy': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        log_audit(db, 'Hủy Phiếu Cọc', 'THONG_TIN_CHOT_KHACH', du_lieu_cu=deal, du_lieu_moi=new_data, ghi_chu=f"Sale hủy cọc phiếu #{deal_id} phòng {room['SoPhong']}: {reason}")
+        
+        db.commit()
+        flash(f"Đã hủy phiếu cọc phòng {room['SoPhong']} thành công. Phòng đã mở lại Trống và gửi thông báo tức thì tới toàn hệ thống!", "success")
+    except Exception as e:
+        db.rollback()
+        flash(f"Lỗi khi hủy cọc: {str(e)}", "error")
+    finally:
+        db.close()
+        
+    return redirect(url_for('sale_bookings'))
 
 # ==========================================
 # PHÂN HỆ DÀNH CHO NHÂN VIÊN VẬN HÀNH (ROLE = 2)
@@ -1291,11 +1358,17 @@ def admin_dashboard():
     # Khối 3: Thống kê số lượng phòng theo trạng thái
     rooms = db.execute("SELECT TrangThai, COUNT(*) as count FROM TAI_SAN GROUP BY TrangThai").fetchall()
     
-    room_stats = {'Trong': 0, 'DatCoc': 0, 'DangThue': 0}
+    room_stats = {'Trong': 0, 'Giữ phòng': 0, 'DangThue': 0}
     for r in rooms:
-        if r['TrangThai'] in room_stats:
-            room_stats[r['TrangThai']] = r['count']
+        st = r['TrangThai']
+        if st in room_stats:
+            room_stats[st] = r['count']
+        elif st == 'DatCoc':
+            room_stats['Giữ phòng'] += r['count']
             
+    # Lấy toàn bộ danh sách thông báo cho Admin quản lý
+    all_thong_bao = db.execute("SELECT * FROM THONG_BAO ORDER BY IsGhim DESC, MaThongBao DESC").fetchall()
+
     db.close()
     return render_template(
         'admin_dashboard.html', 
@@ -1304,6 +1377,7 @@ def admin_dashboard():
         total_expenses=total_expenses,
         total_profit=total_profit,
         room_stats=room_stats,
+        all_thong_bao=all_thong_bao,
         chart_labels=chart_labels,
         chart_revenue=chart_revenue,
         chart_debt=chart_debt,
@@ -1479,21 +1553,58 @@ def admin_thong_bao():
     noidung = request.form.get('noidung')
     if noidung:
         db = get_db()
-        db.execute("INSERT INTO THONG_BAO (NoiDung) VALUES (?)", (noidung,))
+        # Bỏ ghim các thông báo cũ của admin để ghim thông báo mới nhất
+        db.execute("UPDATE THONG_BAO SET IsGhim = 0 WHERE LoaiThongBao = 'ADMIN'")
+        db.execute("INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim) VALUES (?, 1, 'ADMIN', 1)", (noidung,))
         db.commit()
         db.close()
-        flash("Đã gửi thông báo cho toàn bộ nhân viên!", "success")
-    return redirect(url_for('admin_dashboard'))
+        flash("Đã phát và ghim thông báo của Sếp lên Bảng tin!", "success")
+    return redirect(request.referrer or url_for('admin_dashboard'))
 
-@app.route('/admin/thong-bao/tat', methods=['POST'])
+@app.route('/admin/thong-bao/delete/<int:id>', methods=['POST'])
 @role_required([1])
-def admin_thong_bao_tat():
+def admin_thong_bao_delete(id):
     db = get_db()
-    db.execute("UPDATE THONG_BAO SET TrangThai = 0")
+    db.execute("DELETE FROM THONG_BAO WHERE MaThongBao = ?", (id,))
     db.commit()
     db.close()
-    flash("Đã gỡ/tắt thông báo nội bộ!", "info")
-    return redirect(url_for('admin_dashboard'))
+    flash("Đã xóa thông báo khỏi Bảng tin thành công!", "success")
+    return redirect(request.referrer or url_for('admin_dashboard'))
+
+@app.route('/admin/thong-bao/toggle-pin/<int:id>', methods=['POST'])
+@role_required([1])
+def admin_thong_bao_toggle_pin(id):
+    db = get_db()
+    tb = db.execute("SELECT * FROM THONG_BAO WHERE MaThongBao = ?", (id,)).fetchone()
+    if tb:
+        new_pin = 0 if tb['IsGhim'] else 1
+        if new_pin == 1:
+            db.execute("UPDATE THONG_BAO SET IsGhim = 0 WHERE LoaiThongBao = 'ADMIN'")
+        db.execute("UPDATE THONG_BAO SET IsGhim = ? WHERE MaThongBao = ?", (new_pin, id))
+        db.commit()
+        flash("Đã cập nhật trạng thái ghim thông báo!", "success")
+    db.close()
+    return redirect(request.referrer or url_for('admin_dashboard'))
+
+@app.route('/admin/thong-bao/unpin/<int:id>', methods=['POST'])
+@role_required([1])
+def admin_thong_bao_unpin(id):
+    db = get_db()
+    db.execute("UPDATE THONG_BAO SET IsGhim = 0 WHERE MaThongBao = ?", (id,))
+    db.commit()
+    db.close()
+    flash("Đã bỏ ghim thông báo!", "info")
+    return redirect(request.referrer or url_for('admin_dashboard'))
+
+@app.route('/admin/thong-bao/clear-all', methods=['POST'])
+@role_required([1])
+def admin_thong_bao_clear_all():
+    db = get_db()
+    db.execute("DELETE FROM THONG_BAO")
+    db.commit()
+    db.close()
+    flash("Đã xóa sạch toàn bộ thông báo cũ trong Bảng tin!", "success")
+    return redirect(request.referrer or url_for('admin_dashboard'))
 
 @app.route('/admin/config', methods=['GET', 'POST'])
 @role_required([1])
@@ -1817,7 +1928,14 @@ def shared_booking_cancel(deal_id):
         db.execute(
             "UPDATE TAI_SAN SET TrangThai = 'Trong' WHERE MaTaiSan = ?", (deal['MaTaiSan'],)
         )
-        log_audit(db, 'Hủy Bỏ Cọc', 'THONG_TIN_CHOT_KHACH', du_lieu_cu=deal, ghi_chu=f"Hủy bỏ cọc / trả phòng về Trống cho phiếu #{deal_id}")
+        
+        # 4. Tự động phát thông báo tức thì lên toàn hệ thống
+        room = db.execute("SELECT * FROM TAI_SAN WHERE MaTaiSan = ?", (deal['MaTaiSan'],)).fetchone()
+        if room:
+            msg_thong_bao = f"Phòng {room['SoPhong']} {room['DiaChi']} trống khách bỏ cọc"
+            db.execute("INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim) VALUES (?, 1, 'TRONG', 0)", (msg_thong_bao,))
+            
+        log_audit(db, 'Hủy Phiếu Cọc', 'THONG_TIN_CHOT_KHACH', du_lieu_cu=deal, ghi_chu=f"Quản trị/Quản lý hủy bỏ cọc / trả phòng về Trống cho phiếu #{deal_id}")
         db.commit()
         flash("Đã thực hiện bỏ cọc thành công. Phòng đã quay lại trạng thái Trống!", "success")
     except Exception as e:
@@ -2075,6 +2193,14 @@ def shared_contract_forfeit(contract_id):
         db.execute(
             "UPDATE TAI_SAN SET TrangThai = 'Trong' WHERE MaTaiSan = ?", (contract['MaTaiSan'],)
         )
+        
+        # Tự động phát thông báo tức thì lên toàn hệ thống khi bỏ cọc
+        room = db.execute("SELECT * FROM TAI_SAN WHERE MaTaiSan = ?", (contract['MaTaiSan'],)).fetchone()
+        if room:
+            msg_thong_bao = f"Phòng {room['SoPhong']} {room['DiaChi']} trống khách bỏ cọc"
+            db.execute("INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim) VALUES (?, 1, 'TRONG', 0)", (msg_thong_bao,))
+            
+        log_audit(db, 'Hủy Phiếu Cọc', 'HOP_DONG', du_lieu_cu=contract, ghi_chu=f"Quản trị/Quản lý ghi nhận bỏ cọc hợp đồng #{contract_id} phòng {room['SoPhong'] if room else ''}")
         
         db.commit()
         flash("Đã ghi nhận bỏ cọc/phá hợp đồng. Phòng đã được chuyển về trạng thái Trống!", "success")

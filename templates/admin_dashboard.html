@@ -19,28 +19,93 @@
 
 <div class="card" id="announcement-form" style="display: none; border-left: 4px solid var(--accent); margin-bottom: 1.5rem; background: #f0f9ff; padding: 1.25rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-        <h4 style="margin: 0; color: #0369a1; font-size: 0.95rem;"><i class="fa-solid fa-bullhorn"></i> Phát thông báo nội bộ cho Quản lý & Sale</h4>
+        <h4 style="margin: 0; color: #0369a1; font-size: 1rem; font-weight: 700;"><i class="fa-solid fa-bullhorn"></i> Quản Lý & Phát Bảng Tin</h4>
         <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('announcement-form').style.display='none';">&times; Đóng</button>
     </div>
     
-    {% if latest_thong_bao and latest_thong_bao.NoiDung %}
-    <div style="background: white; border: 1px dashed #0284c7; border-radius: 6px; padding: 0.6rem 0.85rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+    {% if admin_pinned_thong_bao and admin_pinned_thong_bao.NoiDung %}
+    <div style="background: white; border: 1px dashed #0284c7; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <div>
-            <span style="font-size: 0.8rem; color: #0369a1; font-weight: 700;">ĐANG PHÁT:</span>
-            <span style="font-size: 0.9rem; color: #1e293b; font-weight: 500;">"{{ latest_thong_bao.NoiDung }}"</span>
+            <span style="font-size: 0.8rem; color: #0369a1; font-weight: 700;"><i class="fa-solid fa-thumbtack"></i> ĐANG GHIM ĐẦU TRANG:</span>
+            <span style="font-size: 0.9rem; color: #1e293b; font-weight: 600; margin-left: 0.25rem;">"{{ admin_pinned_thong_bao.NoiDung }}"</span>
         </div>
-        <form action="{{ url_for('admin_thong_bao_tat') }}" method="POST" style="margin: 0;">
-            <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" title="Tắt thông báo này">
-                <i class="fa-solid fa-volume-xmark"></i> Tắt thông báo
-            </button>
-        </form>
+        <div style="display: flex; gap: 0.4rem;">
+            <form action="{{ url_for('admin_thong_bao_unpin', id=admin_pinned_thong_bao.MaThongBao) }}" method="POST" style="margin: 0;">
+                <button type="submit" class="btn btn-warning btn-sm" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600;">
+                    <i class="fa-solid fa-thumbtack-slash"></i> Bỏ ghim
+                </button>
+            </form>
+            <form action="{{ url_for('admin_thong_bao_delete', id=admin_pinned_thong_bao.MaThongBao) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn XÓA vĩnh viễn thông báo này?');">
+                <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600;">
+                    <i class="fa-solid fa-trash-can"></i> Xóa
+                </button>
+            </form>
+        </div>
     </div>
     {% endif %}
 
-    <form action="{{ url_for('admin_thong_bao') }}" method="POST" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-        <input type="text" name="noidung" class="form-control" placeholder="Nhập nội dung mới (ví dụ: Nghỉ lễ 2/9, thưởng nóng chốt phòng...)" required style="flex: 1; min-width: 250px;">
-        <button type="submit" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; font-weight: 600; border: none; border-radius: 8px; padding: 0.45rem 1rem; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> Phát thông báo ngay</button>
+    <form action="{{ url_for('admin_thong_bao') }}" method="POST" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <input type="text" name="noidung" class="form-control" placeholder="Nhập nội dung Sếp thông báo (sẽ tự động ghim lên đầu Bảng tin)..." required style="flex: 1; min-width: 280px; background: #fff;">
+        <button type="submit" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; font-weight: 600; border: none; border-radius: 8px; padding: 0.45rem 1rem; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25); cursor: pointer;"><i class="fa-solid fa-paper-plane"></i> Đăng & Ghim Ngay</button>
     </form>
+
+    {% if all_thong_bao %}
+    <div style="border-top: 1px solid #bae6fd; padding-top: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h5 style="margin: 0; font-size: 0.85rem; color: #0369a1; text-transform: uppercase; font-weight: 700;"><i class="fa-solid fa-list"></i> Danh sách tất cả thông báo trong Bảng tin</h5>
+            <form action="{{ url_for('admin_thong_bao_clear_all') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn XÓA SẠCH TOÀN BỘ thông báo cũ trong Bảng tin?');">
+                <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600;">
+                    <i class="fa-solid fa-trash-can"></i> Xóa tất cả thông báo cũ
+                </button>
+            </form>
+        </div>
+        <div style="max-height: 240px; overflow-y: auto; background: #fff; border-radius: 6px; border: 1px solid #bae6fd;">
+            <table class="table" style="font-size: 0.82rem; margin: 0;">
+                <thead>
+                    <tr style="background: #f0f9ff; color: #0369a1;">
+                        <th style="width: 130px;">Phân loại</th>
+                        <th>Nội dung thông báo</th>
+                        <th style="width: 130px;">Thời gian</th>
+                        <th style="width: 150px; text-align: center;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tb in all_thong_bao %}
+                    <tr>
+                        <td>
+                            {% if tb.LoaiThongBao == 'ADMIN' %}
+                                <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.7rem;">
+                                    {% if tb.IsGhim %}📌 Sếp thông báo (Ghim){% else %}Sếp thông báo{% endif %}
+                                </span>
+                            {% elif tb.LoaiThongBao == 'CHOT' %}
+                                <span class="badge" style="background: #d1fae5; color: #065f46; font-size: 0.7rem;">Chốt</span>
+                            {% elif tb.LoaiThongBao == 'TRONG' %}
+                                <span class="badge" style="background: #fee2e2; color: #991b1b; font-size: 0.7rem;">Nhả phòng</span>
+                            {% else %}
+                                <span class="badge badge-secondary" style="font-size: 0.7rem;">Tin tức</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 500; color: #1e293b;">{{ tb.NoiDung }}</td>
+                        <td style="color: #64748b; font-size: 0.78rem;">{{ tb.NgayTao }}</td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <form action="{{ url_for('admin_thong_bao_toggle_pin', id=tb.MaThongBao) }}" method="POST" style="display: inline; margin: 0;">
+                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;" title="{% if tb.IsGhim %}Bỏ ghim{% else %}Ghim lên đầu{% endif %}">
+                                    {% if tb.IsGhim %}<i class="fa-solid fa-thumbtack-slash" style="color: #d97706;"></i> Bỏ ghim{% else %}<i class="fa-solid fa-thumbtack"></i> Ghim{% endif %}
+                                </button>
+                            </form>
+                            <form action="{{ url_for('admin_thong_bao_delete', id=tb.MaThongBao) }}" method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Bạn có chắc muốn XÓA vĩnh viễn thông báo này?');">
+                                <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; background: #dc2626; color: #fff; border: none; font-weight: 600;" title="Xóa thông báo">
+                                    <i class="fa-solid fa-trash-can"></i> Xóa
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Khối số liệu tài chính nhanh -->

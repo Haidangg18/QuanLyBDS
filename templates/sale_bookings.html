@@ -68,10 +68,13 @@
                             <td style="font-size: 0.8rem; color: var(--text-secondary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ b.GhiChu }}">
                                 {{ b.GhiChu if b.GhiChu else '-' }}
                             </td>
-                            <td style="text-align: center;">
-                                <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem;">
-                                    <i class="fa-solid fa-pen-to-square"></i> Sửa cọc
+                            <td style="text-align: center; white-space: nowrap;">
+                                <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem;" title="Chỉnh sửa thông tin cọc">
+                                    <i class="fa-solid fa-pen-to-square"></i> Sửa
                                 </a>
+                                <button type="button" class="btn btn-sm" onclick="openCancelModal('{{ b.MaChotKhach }}', '{{ b.SoPhong }}', '{{ b.DiaChi }}', '{{ b.TenKhach }}', '{{ b.TienCoc | format_vnd }}')" style="padding: 0.35rem 0.65rem; margin-left: 0.25rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;" title="Hủy phiếu cọc khi khách bỏ cọc">
+                                    <i class="fa-solid fa-ban"></i> Hủy cọc
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -91,32 +94,15 @@
                     {% for b in bookings %}
                     <div class="room-card">
                         <div class="room-card-header">
-                            <span class="room-card-area">{{ b.KhuVuc }}</span>
-                            <span class="room-card-number">Phòng {{ b.SoPhong }}</span>
-                        </div>
-                        <div class="room-card-address">
-                            <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ b.DiaChi }}
-                        </div>
-                        <div style="margin-bottom: 0.75rem;">
+                            <span class="room-card-title">Phòng {{ b.SoPhong }}</span>
                             <span class="badge badge-datcoc">Giữ phòng</span>
                         </div>
-                        <div class="room-card-financials">
-                            <div class="financial-item">
-                                <span class="fin-label">Giá phòng</span>
-                                <strong class="fin-value">{{ "{:,.0f}".format(b.GiaThue * 1000)|replace(',', '.') }}đ</strong>
-                            </div>
-                            <div class="financial-item">
-                                <span class="fin-label">Tiền cọc trước</span>
-                                <strong class="fin-value" style="color: var(--warning);">{{ "{:,.0f}".format(b.TienCoc * 1000)|replace(',', '.') }}đ</strong>
-                            </div>
-                        </div>
-                        <div style="background: rgba(15, 23, 42, 0.015); border: 1px solid rgba(15, 23, 42, 0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; margin-bottom: 0.75rem;">
-                            <div style="margin-bottom: 0.25rem;">
-                                <strong>Khách hàng:</strong> {{ b.TenKhach }} 
-                                (<a href="tel:{{ b.SoDienThoaiKhach }}" style="text-decoration: none; color: var(--accent);"><i class="fa-solid fa-phone"></i> {{ b.SoDienThoaiKhach }}</a>)
-                            </div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Ngày chốt:</strong> {{ b.NgayChot }}</div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Dự kiến vào:</strong> {{ b.NgayDuKienVaoO }}</div>
+                        <div class="room-card-body">
+                            <div style="margin-bottom: 0.25rem;"><strong>Khách:</strong> {{ b.TenKhach }} ({{ b.SoDienThoaiKhach }})</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Địa chỉ:</strong> {{ b.DiaChi }}</div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Giá thuê:</strong> <span style="color: var(--accent); font-weight: 700;">{{ b.GiaThue | format_vnd }}</span></div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Tiền cọc:</strong> <span style="color: var(--warning); font-weight: 700;">{{ b.TienCoc | format_vnd }}</span></div>
+                            <div style="margin-bottom: 0.25rem;"><strong>Ngày chốt:</strong> {{ b.NgayChot }} | <strong>Vào ở:</strong> {{ b.NgayDuKienVaoO }}</div>
                             <div><strong>Điện đầu vào:</strong> {{ b.SoDienDauVao }} kWh</div>
                             {% if b.GhiChu %}
                                 <div style="border-top: 1px dashed rgba(15, 23, 42, 0.05); padding-top: 0.4rem; margin-top: 0.4rem; font-style: italic; color: var(--text-secondary);">
@@ -124,10 +110,13 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="room-card-action">
-                            <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-block" style="background: #e2e8f0; border-color: #cbd5e1;">
+                        <div class="room-card-action" style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="flex: 1; background: #e2e8f0; border-color: #cbd5e1; text-align: center;">
                                 <i class="fa-solid fa-pen-to-square"></i> Sửa cọc
                             </a>
+                            <button type="button" class="btn btn-sm" onclick="openCancelModal('{{ b.MaChotKhach }}', '{{ b.SoPhong }}', '{{ b.DiaChi }}', '{{ b.TenKhach }}', '{{ b.TienCoc | format_vnd }}')" style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;" title="Hủy phiếu cọc">
+                                <i class="fa-solid fa-ban"></i> Hủy cọc
+                            </button>
                         </div>
                     </div>
                     {% endfor %}
@@ -331,6 +320,44 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Xác Nhận Hủy Phiếu Cọc (Khách Bỏ Cọc) -->
+<div id="cancelModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #dc2626; font-weight: 700;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Hủy Phiếu Cọc (Khách Bỏ Cọc)
+            </h3>
+            <button type="button" onclick="closeCancelModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+        
+        <form id="cancelForm" method="POST" action="">
+            <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; color: #991b1b;">
+                <i class="fa-solid fa-circle-info"></i> Sau khi hủy cọc, phòng sẽ tự động chuyển về trạng thái <strong>Trống</strong> và <strong>phát thông báo tức thời</strong> lên toàn hệ thống để các Sale khác biết kịp thời!
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.25rem; color: var(--text-secondary);">Thông tin phòng & Khách:</label>
+                <div id="modalRoomInfo" style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);"></div>
+                <div id="modalDepositInfo" style="font-size: 0.85rem; color: #d97706; margin-top: 0.2rem; font-weight: 600;"></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="reason" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">Lý do khách bỏ cọc *</label>
+                <textarea id="reason" name="reason" rows="3" class="form-control" required placeholder="Ví dụ: Khách đổi chỗ làm xa nên báo hủy cọc, chấp nhận mất cọc..." style="font-size: 0.9rem;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+                <button type="submit" class="btn btn-danger" style="flex: 1; padding: 0.5rem 1rem;">
+                    <i class="fa-solid fa-ban"></i> Xác nhận hủy & Nhả phòng Trống
+                </button>
+                <button type="button" onclick="closeCancelModal()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                    Đóng
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -349,6 +376,18 @@ function switchTab(tabId) {
     // Hiển thị tab được chọn
     document.getElementById('tab-' + tabId).style.display = 'block';
     document.getElementById('tab-' + tabId + '-btn').classList.add('active');
+}
+
+function openCancelModal(dealId, roomNumber, address, tenantName, deposit) {
+    const form = document.getElementById('cancelForm');
+    form.action = '/sale/booking/cancel/' + dealId;
+    document.getElementById('modalRoomInfo').textContent = 'Phòng ' + roomNumber + ' (' + address + ') - Khách: ' + tenantName;
+    document.getElementById('modalDepositInfo').textContent = 'Tiền cọc giữ chỗ: ' + deposit;
+    document.getElementById('cancelModal').style.display = 'flex';
+}
+
+function closeCancelModal() {
+    document.getElementById('cancelModal').style.display = 'none';
 }
 </script>
 {% endblock %}

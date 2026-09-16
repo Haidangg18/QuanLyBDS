@@ -84,17 +84,130 @@
     {% endif %}
 
     <main class="container">
-        <!-- Thanh Thông Báo Nhẹ Nhàng (Gọn Gàng 1 Dòng) -->
-        {% if session.get('user_id') and latest_thong_bao and latest_thong_bao.NoiDung %}
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; border-radius: 6px; padding: 0.35rem 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; color: #92400e;">
-            <i class="fa-solid fa-bullhorn fa-shake anim-wobble" style="color: #d97706; font-size: 1rem;"></i>
-            <strong style="white-space: nowrap; font-size: 0.8rem; text-transform: uppercase; color: #b45309;">Thông báo:</strong>
-            <div style="flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                <span>{{ latest_thong_bao.NoiDung }}</span>
+        <!-- Thanh Bản Tin & Thông Báo Hệ Thống Thông Minh (Gọn gàng 1 dòng 38px, Tự động cuộn/Ticker) -->
+        {% if session.get('user_id') and recent_thong_bao %}
+        <div id="systemNotificationBar" style="background: linear-gradient(90deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 0.35rem 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.88rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 0;">
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f59e0b; color: white; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 4px; white-space: nowrap; letter-spacing: 0.3px;">
+                    <i class="fa-solid fa-bullhorn fa-shake"></i> BẢN TIN
+                </span>
+                
+                <div id="tickerTrack" style="flex: 1; overflow: hidden; position: relative; height: 24px; cursor: pointer;" onclick="openNotificationModal()" title="Nhấn để xem toàn bộ danh sách bản tin">
+                    {% for tb in recent_thong_bao %}
+                    <div class="ticker-slide" data-idx="{{ loop.index0 }}" style="display: {% if loop.first %}flex{% else %}none{% endif %}; align-items: center; gap: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 24px;">
+                        {% if tb.LoaiThongBao == 'ADMIN' %}
+                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; padding: 0.1rem 0.45rem; font-weight: 700;">
+                                <i class="fa-solid fa-bullhorn"></i> {% if tb.IsGhim %}📌 {% endif %}Sếp thông báo:
+                            </span>
+                        {% elif tb.LoaiThongBao == 'CHOT' or 'chốt' in tb.NoiDung|lower %}
+                            <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.72rem; padding: 0.1rem 0.45rem; font-weight: 700;">
+                                <i class="fa-solid fa-check"></i> Chốt:
+                            </span>
+                        {% elif tb.LoaiThongBao == 'TRONG' or 'bỏ cọc' in tb.NoiDung|lower or 'trống' in tb.NoiDung|lower %}
+                            <span class="badge" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-size: 0.72rem; padding: 0.1rem 0.45rem; font-weight: 700;">
+                                <i class="fa-solid fa-bell"></i> Nhả phòng:
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.72rem; padding: 0.1rem 0.45rem; font-weight: 700;">
+                                <i class="fa-solid fa-circle-info"></i> Bảng tin:
+                            </span>
+                        {% endif %}
+                        <span style="color: #78350f; font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis;">{{ tb.NoiDung }}</span>
+                        <span style="color: #b45309; font-size: 0.75rem; opacity: 0.8; margin-left: 0.25rem;">({{ tb.NgayTao }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <span style="font-size: 0.75rem; color: #b45309; opacity: 0.75; white-space: nowrap;">
-                {{ latest_thong_bao.NgayTao }}
-            </span>
+
+            <div style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+                {% if recent_thong_bao|length > 1 %}
+                <button type="button" onclick="prevTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin trước">&lsaquo;</button>
+                <button type="button" onclick="nextTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin tiếp theo">&rsaquo;</button>
+                {% endif %}
+                <button type="button" onclick="openNotificationModal()" style="background: white; border: 1px solid #fde68a; color: #b45309; font-weight: 600; font-size: 0.78rem; border-radius: 4px; padding: 0.18rem 0.55rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;" title="Xem tất cả bản tin">
+                    <i class="fa-solid fa-list-ul"></i> Tất cả ({{ recent_thong_bao|length }})
+                </button>
+                <button type="button" onclick="document.getElementById('systemNotificationBar').style.display='none';" style="background: none; border: none; color: #b45309; font-size: 1.1rem; cursor: pointer; padding: 0 0.25rem; line-height: 1;" title="Ẩn thanh bản tin">&times;</button>
+            </div>
+        </div>
+
+        <!-- Modal Danh Sách Toàn Bộ Bản Tin -->
+        <div id="notificationListModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 12px; width: 92%; max-width: 680px; max-height: 82vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden;">
+                <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #fffbeb;">
+                    <h3 style="margin: 0; font-size: 1.05rem; color: #92400e; display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                        <i class="fa-solid fa-bullhorn" style="color: #d97706;"></i> Bảng tin
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        {% if session.get('role_id') == 1 %}
+                        <form action="{{ url_for('admin_thong_bao_clear_all') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn XÓA SẠCH TOÀN BỘ thông báo cũ trong Bảng tin?');">
+                            <button type="submit" class="btn btn-danger btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; background: #dc2626; border: none; color: #fff; font-weight: 600; border-radius: 5px; cursor: pointer;">
+                                <i class="fa-solid fa-trash-can"></i> Xóa tất cả thông báo cũ
+                            </button>
+                        </form>
+                        {% endif %}
+                        <button type="button" onclick="closeNotificationModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+                    </div>
+                </div>
+                
+                <div style="padding: 1rem 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.6rem;">
+                    {% for tb in recent_thong_bao %}
+                    <div style="background: {% if tb.IsGhim %}#fffbeb{% else %}#f8fafc{% endif %}; border: 1px solid {% if tb.IsGhim %}#fde68a{% else %}#e2e8f0{% endif %}; border-radius: 8px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                {% if tb.LoaiThongBao == 'ADMIN' %}
+                                    <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.75rem; padding: 0.15rem 0.5rem; font-weight: 700;">
+                                        <i class="fa-solid fa-bullhorn"></i> Sếp thông báo:
+                                    </span>
+                                    {% if tb.IsGhim %}
+                                    <span class="badge" style="background: #fed7aa; color: #9a3412; font-size: 0.7rem; padding: 0.1rem 0.4rem; font-weight: 700;">
+                                        <i class="fa-solid fa-thumbtack"></i> ĐANG GHIM
+                                    </span>
+                                    {% endif %}
+                                {% elif tb.LoaiThongBao == 'CHOT' or 'chốt' in tb.NoiDung|lower %}
+                                    <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.75rem; padding: 0.15rem 0.5rem; font-weight: 700;">
+                                        <i class="fa-solid fa-check"></i> Chốt:
+                                    </span>
+                                {% elif tb.LoaiThongBao == 'TRONG' or 'bỏ cọc' in tb.NoiDung|lower or 'trống' in tb.NoiDung|lower %}
+                                    <span class="badge" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-size: 0.75rem; padding: 0.15rem 0.5rem; font-weight: 700;">
+                                        <i class="fa-solid fa-bell"></i> Nhả phòng:
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.75rem; padding: 0.15rem 0.5rem; font-weight: 700;">
+                                        <i class="fa-solid fa-circle-info"></i> Bảng tin:
+                                    </span>
+                                {% endif %}
+                                <span style="font-size: 0.75rem; color: #64748b;">
+                                    <i class="fa-regular fa-clock"></i> {{ tb.NgayTao }}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.92rem; color: #1e293b; font-weight: 600; word-break: break-word;">
+                                {{ tb.NoiDung }}
+                            </div>
+                        </div>
+
+                        {% if session.get('role_id') == 1 %}
+                        <div style="display: flex; gap: 0.35rem; align-items: center; white-space: nowrap;">
+                            <form action="{{ url_for('admin_thong_bao_toggle_pin', id=tb.MaThongBao) }}" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;" title="{% if tb.IsGhim %}Bỏ ghim{% else %}Ghim lên đầu{% endif %}">
+                                    {% if tb.IsGhim %}<i class="fa-solid fa-thumbtack-slash" style="color: #d97706;"></i> Bỏ ghim{% else %}<i class="fa-solid fa-thumbtack"></i> Ghim{% endif %}
+                                </button>
+                            </form>
+                            <form action="{{ url_for('admin_thong_bao_delete', id=tb.MaThongBao) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn XÓA thông báo này?');">
+                                <button type="submit" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; background: #dc2626; color: #fff; border: none; font-weight: 600;" title="Xóa thông báo">
+                                    <i class="fa-solid fa-trash-can"></i> Xóa
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="padding: 0.75rem 1.25rem; border-top: 1px solid #e2e8f0; background: #f8fafc; text-align: right;">
+                    <button type="button" onclick="closeNotificationModal()" class="btn btn-secondary btn-sm" style="padding: 0.4rem 1rem;">Đóng</button>
+                </div>
+            </div>
         </div>
         {% endif %}
 
@@ -118,6 +231,43 @@
     </footer>
 
     <script>
+        // Tự động chuyển đổi các bản tin Ticker sau mỗi 4 giây
+        let currentTickerIdx = 0;
+        const tickerSlides = document.querySelectorAll('.ticker-slide');
+        
+        function showTickerSlide(idx) {
+            if (tickerSlides.length === 0) return;
+            tickerSlides.forEach(s => s.style.display = 'none');
+            currentTickerIdx = (idx + tickerSlides.length) % tickerSlides.length;
+            tickerSlides[currentTickerIdx].style.display = 'flex';
+        }
+        
+        function nextTickerSlide(e) {
+            if (e) e.stopPropagation();
+            showTickerSlide(currentTickerIdx + 1);
+        }
+        
+        function prevTickerSlide(e) {
+            if (e) e.stopPropagation();
+            showTickerSlide(currentTickerIdx - 1);
+        }
+        
+        if (tickerSlides.length > 1) {
+            setInterval(() => {
+                showTickerSlide(currentTickerIdx + 1);
+            }, 4500);
+        }
+
+        function openNotificationModal() {
+            const modal = document.getElementById('notificationListModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeNotificationModal() {
+            const modal = document.getElementById('notificationListModal');
+            if (modal) modal.style.display = 'none';
+        }
+
         // Tự động ẩn thông báo flash sau 3 giây
         document.addEventListener('DOMContentLoaded', function() {
             const alerts = document.querySelectorAll('.alert');
