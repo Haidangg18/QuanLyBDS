@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Nhật ký hoạt động hệ thống - QL Bất Động Sản{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title" style="margin-bottom: 0;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Nhật Ký Hoạt Động Hệ Thống</h1>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Quay lại Dashboard</a>
+</div>
+
+<div class="card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
+    <form method="GET" action="{{ url_for('admin_audit_log') }}" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
+                <i class="fa-regular fa-calendar"></i> Tháng
+            </label>
+            <select name="month" class="form-control" style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+                <option value="">-- Tất cả các tháng --</option>
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if selected_month|string == m|string %}selected{% endif %}>Tháng {{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="flex: 1; min-width: 140px;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
+                <i class="fa-solid fa-calendar-days"></i> Năm
+            </label>
+            <select name="year" class="form-control" style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+                <option value="">-- Tất cả các năm --</option>
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if selected_year|string == y|string %}selected{% endif %}>Năm {{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex: 1.5; min-width: 180px;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
+                <i class="fa-solid fa-bolt"></i> Loại hành động
+            </label>
+            <select name="action" class="form-control" style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+                <option value="">-- Tất cả hành động --</option>
+                {% for act in available_actions %}
+                    <option value="{{ act }}" {% if selected_action == act %}selected{% endif %}>{{ act }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.45rem 1rem; font-size: 0.9rem;">
+                <i class="fa-solid fa-filter"></i> Lọc dữ liệu
+            </button>
+            <a href="{{ url_for('admin_audit_log') }}" class="btn btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.9rem;" title="Đặt lại bộ lọc">
+                <i class="fa-solid fa-rotate-left"></i> Đặt lại
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h3 style="margin-bottom: 0; font-size: 1.05rem; color: var(--text-primary);"><i class="fa-solid fa-list"></i> Danh sách nhật ký thao tác</h3>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Tổng cộng: <strong>{{ logs|length }}</strong> bản ghi</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="width: 45px; text-align: center;">STT</th>
+                    <th style="width: 150px;">Thời Gian</th>
+                    <th style="width: 160px;">Tài Khoản / Người Làm</th>
+                    <th style="width: 120px;">Hành Động</th>
+                    <th style="width: 120px;">Bảng Tác Động</th>
+                    <th>Chi Tiết Thao Tác</th>
+                    <th style="width: 110px; text-align: center;">Dữ Liệu Vết</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for log in logs %}
+                    <tr>
+                        <td style="text-align: center; color: var(--text-secondary);">{{ loop.index }}</td>
+                        <td style="font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap;">
+                            <i class="fa-regular fa-clock"></i> {{ log.ThoiGian }}
+                        </td>
+                        <td>
+                            <strong>{{ log.HoTen }}</strong>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Mã TK: #{{ log.MaTaiKhoan }}</div>
+                        </td>
+                        <td>
+                            {% if 'Xóa' in log.HanhDong %}
+                                <span class="badge" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">{{ log.HanhDong }}</span>
+                            {% elif 'Sửa' in log.HanhDong %}
+                                <span class="badge" style="background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a;">{{ log.HanhDong }}</span>
+                            {% elif 'Thêm' in log.HanhDong %}
+                                <span class="badge" style="background-color: #dcfce7; color: #16a34a; border: 1px solid #86efac;">{{ log.HanhDong }}</span>
+                            {% elif 'Hủy' in log.HanhDong %}
+                                <span class="badge" style="background-color: #fef2f2; color: #b91c1c; border: 1px solid #f87171;">{{ log.HanhDong }}</span>
+                            {% else %}
+                                <span class="badge" style="background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe;">{{ log.HanhDong }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <code style="background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: var(--accent);">{{ log.BangBiTacDong or 'N/A' }}</code>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.88rem;">{{ log.GhiChu or '-' }}</span>
+                        </td>
+                        <td style="text-align: center;">
+                            {% if log.DuLieuCu or log.DuLieuMoi %}
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="showLogDetails('{{ log.MaLog }}')" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">
+                                    <i class="fa-solid fa-eye"></i> Xem vết
+                                </button>
+                                <div id="log-detail-{{ log.MaLog }}" style="display: none;" 
+                                     data-old='{{ log.DuLieuCu or "" }}' 
+                                     data-new='{{ log.DuLieuMoi or "" }}'
+                                     data-title="{{ log.HanhDong }} - {{ log.HoTen }} ({{ log.ThoiGian }})">
+                                </div>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+                            <div style="font-size: 2rem; color: #cbd5e1; margin-bottom: 0.5rem;"><i class="fa-regular fa-folder-open"></i></div>
+                            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Chưa có nhật ký hoạt động nào</div>
+                            <p style="font-size: 0.82rem; margin-top: 0.25rem;">Hệ thống sẽ ghi nhận lịch sử khi tài khoản thực hiện sửa hóa đơn, xóa chi phí hoặc hủy cọc.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal xem chi tiết dữ liệu vết (Giao diện lịch sự, chuyên nghiệp, không hiện code thô) -->
+<div id="logModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+            <h3 id="modalTitle" style="margin: 0; font-size: 1.05rem; color: var(--text-primary); font-weight: 700;"><i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> Chi tiết thông tin đối soát</h3>
+            <button type="button" onclick="closeLogModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <!-- Khối trước thay đổi -->
+            <div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 0.85rem;">
+                <h4 style="font-size: 0.85rem; color: #c53030; margin-top: 0; margin-bottom: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Dữ liệu ban đầu (Trước):
+                </h4>
+                <div id="modalOldData"></div>
+            </div>
+
+            <!-- Khối sau thay đổi -->
+            <div style="background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; padding: 0.85rem;">
+                <h4 style="font-size: 0.85rem; color: #276749; margin-top: 0; margin-bottom: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-circle-check"></i> Dữ liệu mới (Sau khi sửa):
+                </h4>
+                <div id="modalNewData"></div>
+            </div>
+        </div>
+        
+        <div style="text-align: right; margin-top: 1.25rem; border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeLogModal()">Đóng cửa sổ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Từ điển việt hóa các tên trường dữ liệu
+const FIELD_LABELS = {
+    'MaHoaDon': 'Mã hóa đơn',
+    'MaTaiSan': 'Mã tài sản',
+    'MaHopDong': 'Mã hợp đồng',
+    'TienNha': 'Tiền nhà',
+    'SoDien': 'Số điện (kWh)',
+    'TienDien': 'Tiền điện',
+    'TienNuoc': 'Tiền nước',
+    'TienDichVu': 'Tiền dịch vụ',
+    'TongTien': 'Tổng tiền hóa đơn',
+    'TrangThaiThanhToan': 'Trạng thái thanh toán',
+    'MaChiPhi': 'Mã phiếu chi',
+    'LoaiChiPhi': 'Loại chi phí',
+    'SoTien': 'Số tiền chi',
+    'NoiDung': 'Nội dung chi tiết',
+    'NgayNhap': 'Ngày nhập',
+    'GiaThue': 'Giá thuê',
+    'SoPhong': 'Số phòng',
+    'KhuVuc': 'Khu vực',
+    'DiaChi': 'Địa chỉ'
+};
+
+function formatJsonToFriendlyTable(jsonStr) {
+    if (!jsonStr) return '<div style="color: #a0aec0; font-style: italic; font-size: 0.85rem;">(Không có dữ liệu)</div>';
+    
+    try {
+        const obj = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+        if (!obj || Object.keys(obj).length === 0) {
+            return '<div style="color: #a0aec0; font-style: italic; font-size: 0.85rem;">(Không có dữ liệu)</div>';
+        }
+        
+        let html = '<table style="width: 100%; font-size: 0.83rem; border-collapse: collapse;">';
+        for (const key in obj) {
+            const label = FIELD_LABELS[key] || key;
+            let val = obj[key];
+            
+            // Định dạng hiển thị tiền tệ chuẩn tiếng Việt
+            if (typeof val === 'number' && (key.includes('Tien') || key.includes('Gia') || key.includes('SoTien'))) {
+                val = '<strong style="color: #2b6cb0;">' + new Intl.NumberFormat('vi-VN').format(val) + ' đ</strong>';
+            } else if (val === null || val === undefined) {
+                val = '<span style="color: #cbd5e0;">-</span>';
+            }
+            
+            html += `
+                <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                    <td style="padding: 0.4rem 0.2rem; color: #4a5568; font-weight: 600; width: 45%; vertical-align: top;">${label}</td>
+                    <td style="padding: 0.4rem 0.2rem; color: #1a202c; vertical-align: top;">${val}</td>
+                </tr>
+            `;
+        }
+        html += '</table>';
+        return html;
+    } catch(e) {
+        return `<div style="font-size: 0.85rem; color: #4a5568;">${jsonStr}</div>`;
+    }
+}
+
+function showLogDetails(logId) {
+    const el = document.getElementById('log-detail-' + logId);
+    if (!el) return;
+    
+    document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-file-contract" style="color: var(--accent);"></i> ' + (el.getAttribute('data-title') || 'Chi tiết thông tin đối soát');
+    
+    let oldStr = el.getAttribute('data-old') || '';
+    let newStr = el.getAttribute('data-new') || '';
+    
+    document.getElementById('modalOldData').innerHTML = formatJsonToFriendlyTable(oldStr);
+    document.getElementById('modalNewData').innerHTML = formatJsonToFriendlyTable(newStr);
+    
+    const modal = document.getElementById('logModal');
+    modal.style.display = 'flex';
+}
+
+function closeLogModal() {
+    document.getElementById('logModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('logModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
