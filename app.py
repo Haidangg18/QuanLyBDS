@@ -128,12 +128,10 @@ _thong_bao_cache = {
 }
 
 def invalidate_thong_bao_cache():
-    global _thong_bao_cache
     _thong_bao_cache['time'] = 0
 
 @app.context_processor
 def inject_thong_bao():
-    global _thong_bao_cache
     now = time.time()
     
     red_alerts = 0
