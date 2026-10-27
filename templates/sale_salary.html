@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng Lương - Bất Động Sản Đăng Vy{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+        <h1 class="page-title" style="margin-bottom: 0;">
+            <i class="fa-solid fa-sack-dollar" style="color: var(--accent);"></i> BẢNG LƯƠNG
+        </h1>
+    </div>
+
+    <!-- Bộ lọc Tháng & Năm -->
+    <form method="GET" action="{{ url_for('sale_salary') }}" style="display: flex; gap: 0.5rem; align-items: center; background: white; padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0;"><i class="fa-regular fa-calendar"></i> Kỳ lương:</label>
+        <select name="month" class="form-control" style="padding: 0.35rem 0.6rem; font-size: 0.88rem; width: auto; font-weight: 600;">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>Tháng {{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="year" class="form-control" style="padding: 0.35rem 0.6rem; font-size: 0.88rem; width: auto; font-weight: 600;">
+            {% for y in range(year - 1, year + 2) %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>Năm {{ y }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.35rem 0.85rem;">
+            <i class="fa-solid fa-filter"></i> Lọc
+        </button>
+    </form>
+</div>
+
+<!-- Thẻ KPI & Tiến độ -->
+<div class="card" style="margin-bottom: 1.25rem; background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">
+                Mục tiêu KPI Tháng {{ month }}/{{ year }}: 
+                <span style="color: var(--accent);">{{ so_phong_chot }} / {{ chi_tieu_kpi }} phòng</span>
+            </h3>
+            <p style="margin: 0.35rem 0 0 0; font-size: 0.88rem; color: var(--text-secondary);">
+                {% if dat_kpi %}
+                    <span style="color: #059669; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Đã đạt chỉ tiêu KPI</span> — Hưởng 100% lương cứng ({{ luong_cung | format_vnd }})
+                {% else %}
+                    <span style="color: #d97706; font-weight: 600;"><i class="fa-solid fa-hourglass-half"></i> Chưa đạt chỉ tiêu KPI</span> — Cần chốt thêm <strong>{{ chi_tieu_kpi - so_phong_chot }} phòng</strong> để nhận lương cứng
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            {% if dat_kpi %}
+                <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 0.4rem 0.85rem; font-size: 0.9rem; font-weight: 600; border-radius: 6px;">
+                    <i class="fa-solid fa-check"></i> Đạt KPI
+                </span>
+            {% else %}
+                <span class="badge" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 0.4rem 0.85rem; font-size: 0.9rem; font-weight: 600; border-radius: 6px;">
+                    Tiến độ {{ ((so_phong_chot / chi_tieu_kpi) * 100)|round(1) }}%
+                </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 4 Thẻ Thu Nhập Tháng Này -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <!-- 1. Lương cứng -->
+    <div class="card" style="padding: 1.25rem; border: 1px solid #e2e8f0; border-top: 3px solid #6366f1; border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">LƯƠNG CỨNG</span>
+            <i class="fa-solid fa-briefcase" style="color: #6366f1;"></i>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem;">
+            {{ luong_cung_nhan | format_vnd }}
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+            {% if dat_kpi %}
+                <span style="color: #059669; font-weight: 600;">Nhận đủ 100%</span>
+            {% else %}
+                <span style="color: #94a3b8;">Mức gốc: {{ luong_cung | format_vnd }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 2. Hoa hồng chốt phòng -->
+    <div class="card" style="padding: 1.25rem; border: 1px solid #e2e8f0; border-top: 3px solid #06b6d4; border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">HOA HỒNG CHỐT</span>
+            <i class="fa-solid fa-handshake" style="color: #06b6d4;"></i>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem;">
+            {{ hoa_hong_chot | format_vnd }}
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+            Từ <strong>{{ so_phong_chot }}</strong> phòng chốt
+        </div>
+    </div>
+
+    <!-- 3. Hoa hồng gia hạn -->
+    <div class="card" style="padding: 1.25rem; border: 1px solid #e2e8f0; border-top: 3px solid #10b981; border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">THƯỞNG GIA HẠN</span>
+            <i class="fa-solid fa-gift" style="color: #10b981;"></i>
+        </div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #059669; margin-bottom: 0.25rem;">
+            {{ hoa_hong_gia_han | format_vnd }}
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+            Từ <strong>{{ so_gia_han }}</strong> HĐ gia hạn (60k/HĐ)
+        </div>
+    </div>
+
+    <!-- 4. Tổng thực lĩnh -->
+    <div class="card" style="padding: 1.25rem; border: 1px solid #fed7aa; border-top: 3px solid #f59e0b; background: #fffdfa; border-radius: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: #b45309;">TỔNG THỰC LĨNH</span>
+            <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
+        </div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: #b45309; margin-bottom: 0.25rem;">
+            {{ tong_thu_nhap | format_vnd }}
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+            Kỳ Tháng {{ month }}/{{ year }}
+        </div>
+    </div>
+</div>
+
+<!-- Bảng Chi Tiết Bảng Lương Tháng Này -->
+<div class="card" style="margin-bottom: 1.5rem; border-radius: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.05rem; color: var(--text-primary); font-weight: 700;">
+            <i class="fa-solid fa-file-invoice-dollar" style="color: var(--accent);"></i> Chi Tiết Bảng Lương Tháng {{ month }}/{{ year }}
+        </h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table" style="font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Khoản mục thu nhập</th>
+                    <th style="text-align: center;">Số lượng / Chi tiết</th>
+                    <th style="text-align: right;">Định mức</th>
+                    <th style="text-align: right;">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align: center;">1</td>
+                    <td>
+                        <strong>Lương cứng</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Hưởng khi đạt chỉ tiêu tối thiểu {{ chi_tieu_kpi }} phòng/tháng</div>
+                    </td>
+                    <td style="text-align: center;">
+                        {% if dat_kpi %}
+                            <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.75rem;">Đạt {{ so_phong_chot }}/{{ chi_tieu_kpi }} phòng</span>
+                        {% else %}
+                            <span class="badge" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.75rem;">Thiếu {{ chi_tieu_kpi - so_phong_chot }} phòng</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">{{ luong_cung | format_vnd }}</td>
+                    <td style="text-align: right; font-weight: 700;">{{ luong_cung_nhan | format_vnd }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;">2</td>
+                    <td>
+                        <strong>Hoa hồng chốt phòng</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Hoa hồng các phòng chốt thành công trong tháng</div>
+                    </td>
+                    <td style="text-align: center;"><strong>{{ so_phong_chot }}</strong> phòng</td>
+                    <td style="text-align: right;">Theo từng phòng</td>
+                    <td style="text-align: right; font-weight: 700; color: #0284c7;">{{ hoa_hong_chot | format_vnd }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;">3</td>
+                    <td>
+                        <strong>Thưởng gia hạn hợp đồng</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Thưởng chăm sóc khách tái ký hợp đồng (+60.000đ/HĐ)</div>
+                    </td>
+                    <td style="text-align: center;"><strong>{{ so_gia_han }}</strong> hợp đồng</td>
+                    <td style="text-align: right;">60.000 đ/HĐ</td>
+                    <td style="text-align: right; font-weight: 700; color: #059669;">{{ hoa_hong_gia_han | format_vnd }}</td>
+                </tr>
+                <tr style="background: #fffbeb; font-size: 0.98rem;">
+                    <td colspan="4" style="text-align: right; font-weight: 800; color: #b45309;">
+                        TỔNG THỰC LĨNH:
+                    </td>
+                    <td style="text-align: right; font-weight: 800; color: #b45309; font-size: 1.15rem;">
+                        {{ tong_thu_nhap | format_vnd }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if renewals %}
+<!-- Danh Sách HĐ Đã Gia Hạn Trong Tháng -->
+<div class="card" style="border-radius: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.05rem; color: var(--text-primary); font-weight: 700;">
+            <i class="fa-solid fa-arrows-rotate" style="color: #059669;"></i> Danh Sách Hợp Đồng Đã Gia Hạn (Tháng {{ month }}/{{ year }})
+        </h3>
+        <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.8rem;">
+            +{{ hoa_hong_gia_han | format_vnd }} thưởng
+        </span>
+    </div>
+    <div class="table-responsive">
+        <table class="table" style="font-size: 0.88rem;">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Mã HĐ</th>
+                    <th>Phòng</th>
+                    <th>Địa chỉ</th>
+                    <th>Khách thuê</th>
+                    <th>Ngày gia hạn</th>
+                    <th style="text-align: center;">Thời hạn thêm</th>
+                    <th>Hạn kết thúc mới</th>
+                    <th style="text-align: right;">Thưởng</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in renewals %}
+                <tr>
+                    <td style="text-align: center;">{{ loop.index }}</td>
+                    <td><code>HĐ-{{ "%03d"|format(r.MaHopDong) }}</code></td>
+                    <td><span class="badge badge-dangthue">Phòng {{ r.SoPhong }}</span></td>
+                    <td>{{ r.DiaChi }}</td>
+                    <td><strong>{{ r.TenKhach }}</strong></td>
+                    <td>{{ r.NgayGiaHan }}</td>
+                    <td style="text-align: center; font-weight: 600;">+{{ r.SoThangGiaHan }} tháng</td>
+                    <td>{{ r.NgayKetThucMoi }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #059669;">
+                        +{{ r.HoaHongGiaHan | format_vnd }}
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary);">{{ r.GhiChu or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
