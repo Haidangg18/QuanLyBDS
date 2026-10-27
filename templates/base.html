@@ -4,10 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hệ thống Quản lý Bất động sản{% endblock %}</title>
-    <!-- CSS Tùy chỉnh (v=9.0) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=9.0">
+    <!-- CSS Tùy chỉnh (v=10.0) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=10.0">
     <!-- Biểu tượng Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .nav-alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3.5px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff !important;
+            font-size: 0.64rem;
+            font-weight: 700;
+            padding: 0.12rem 0.52rem;
+            border-radius: 999px;
+            margin-left: 0.35rem;
+            line-height: 1.1;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            animation: alertBlinkGlow 1.6s infinite ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            vertical-align: middle;
+        }
+        .nav-alert-badge i {
+            color: #ffffff !important;
+            font-size: 0.6rem;
+        }
+        @keyframes alertBlinkGlow {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+            }
+            50% {
+                opacity: 0.72;
+                transform: scale(1.05);
+                box-shadow: 0 0 12px rgba(239, 68, 68, 0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+            }
+        }
+    </style>
 </head>
 <body>
     {% if session.get('user_id') %}
@@ -34,6 +76,7 @@
                     <li><a href="{{ url_for('sale_dashboard') }}" class="nav-link {% if request.path == url_for('sale_dashboard') %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
                     <li><a href="{{ url_for('shared_tracking') }}" class="nav-link {% if request.path == url_for('shared_tracking') %}active{% endif %}"><i class="fa-solid fa-building"></i> Danh sách phòng</a></li>
                     <li><a href="{{ url_for('sale_bookings') }}" class="nav-link {% if request.path == url_for('sale_bookings') %}active{% endif %}"><i class="fa-solid fa-handshake"></i> Lịch sử chốt</a></li>
+                    <li><a href="{{ url_for('sale_salary') }}" class="nav-link {% if request.path == url_for('sale_salary') %}active{% endif %}"><i class="fa-solid fa-sack-dollar"></i> Lương</a></li>
 
                 {% elif session.get('role_id') == 2 %}
                     <!-- Vai trò Vận hành -->
@@ -52,7 +95,12 @@
                     <li><a href="{{ url_for('shared_contracts') }}" class="nav-link {% if request.path == url_for('shared_contracts') %}active{% endif %}"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
                     <li><a href="{{ url_for('manager_kho') }}" class="nav-link {% if request.path == url_for('manager_kho') %}active{% endif %}"><i class="fa-solid fa-warehouse"></i> Kho</a></li>
                     <li><a href="{{ url_for('admin_employees') }}" class="nav-link {% if request.path == url_for('admin_employees') %}active{% endif %}"><i class="fa-solid fa-users-gear"></i> Nhân sự</a></li>
-                    <li><a href="{{ url_for('admin_audit_log') }}" class="nav-link {% if request.path == url_for('admin_audit_log') %}active{% endif %}"><i class="fa-solid fa-clock-rotate-left"></i> Nhật ký</a></li>
+                    <li><a href="{{ url_for('admin_audit_log') }}" class="nav-link {% if request.path == url_for('admin_audit_log') %}active{% endif %}" style="position: relative;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Nhật ký
+                        {% if unread_red_alerts_count and unread_red_alerts_count > 0 %}
+                            <span class="nav-alert-badge"><i class="fa-solid fa-triangle-exclamation"></i> {{ unread_red_alerts_count }} cảnh báo</span>
+                        {% endif %}
+                    </a></li>
                 {% endif %}
             </ul>
 

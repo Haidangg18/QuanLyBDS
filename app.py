@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import time
 from datetime import datetime, date
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -10,12 +11,18 @@ app.secret_key = 'super_secret_antigravity_key_for_session'
 DATABASE = os.path.join(os.path.dirname(__file__), 'db', 'MyDatabase.db')
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=15.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
+    conn.execute("PRAGMA cache_size = 10000;")
+    conn.execute("PRAGMA temp_store = MEMORY;")
     return conn
 
 import json
+
+from risk_engine import evaluate_risk
 
 def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, ghi_chu=None):
     if 'user_id' not in session: return
@@ -36,9 +43,49 @@ def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, g
         old_json = json.dumps(old_d, ensure_ascii=False) if old_d is not None else None
         new_json = json.dumps(new_d, ensure_ascii=False) if new_d is not None else None
         
+        user_id = session.get('user_id')
+        role_id = session.get('role_id', 3)
+        client_ip = request.remote_addr if request else '127.0.0.1'
+        
+        # Đánh giá rủi ro tự động theo 17 quy tắc
+        risk_result = evaluate_risk(
+            db=db,
+            user_id=user_id,
+            role_id=role_id,
+            action=hanh_dong,
+            table_name=bang_tac_dong,
+            old_data=old_d,
+            new_data=new_d,
+            note=ghi_chu,
+            ip=client_ip
+        )
+        
+        score = risk_result['score']
+        level = risk_result['level']
+        reasons_json = json.dumps(risk_result['rules'], ensure_ascii=False) if risk_result['rules'] else None
+        recommendation = risk_result['recommendation']
+        
         db.execute(
-            "INSERT INTO AUDIT_LOG (MaTaiKhoan, HoTen, HanhDong, BangBiTacDong, DuLieuCu, DuLieuMoi, GhiChu) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (session['user_id'], session.get('fullname', ''), hanh_dong, bang_tac_dong, old_json, new_json, ghi_chu)
+            """
+            INSERT INTO AUDIT_LOG 
+            (MaTaiKhoan, HoTen, HanhDong, BangBiTacDong, DuLieuCu, DuLieuMoi, GhiChu, DiemRuiRo, PhanLoaiRuiRo, LyDoRuiRo, KhuyenNghi, DiaChiIP, TrangThaiXuLy)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                session.get('fullname', ''),
+                hanh_dong,
+                bang_tac_dong,
+                old_json,
+                new_json,
+                ghi_chu,
+                score,
+                level,
+                reasons_json,
+                recommendation,
+                client_ip,
+                'Chưa xử lý'
+            )
         )
     except Exception as e: 
         print("Audit Log Error:", str(e))
@@ -75,8 +122,36 @@ def add_months(sourcedate, months):
     day = min(sourcedate.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
 
+_thong_bao_cache = {
+    'time': 0,
+    'data': None
+}
+
+def invalidate_thong_bao_cache():
+    global _thong_bao_cache
+    _thong_bao_cache['time'] = 0
+
 @app.context_processor
 def inject_thong_bao():
+    global _thong_bao_cache
+    now = time.time()
+    
+    red_alerts = 0
+    if session.get('role_id') == 1:
+        try:
+            db_alert = get_db()
+            red_row = db_alert.execute(
+                "SELECT COUNT(*) as cnt FROM AUDIT_LOG WHERE PhanLoaiRuiRo = 'Báo động đỏ' AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)"
+            ).fetchone()
+            red_alerts = red_row['cnt'] if red_row else 0
+            db_alert.close()
+        except:
+            pass
+
+    if _thong_bao_cache['data'] and (now - _thong_bao_cache['time'] < 15):
+        cached = dict(_thong_bao_cache['data'])
+        cached['unread_red_alerts_count'] = red_alerts
+        return cached
     try:
         db = get_db()
         tb_list = db.execute("SELECT * FROM THONG_BAO WHERE TrangThai = 1 ORDER BY IsGhim DESC, MaThongBao DESC LIMIT 20").fetchall()
@@ -84,96 +159,28 @@ def inject_thong_bao():
         latest_tb = recent_tb[0] if recent_tb else None
         admin_pinned = db.execute("SELECT * FROM THONG_BAO WHERE TrangThai = 1 AND IsGhim = 1 ORDER BY MaThongBao DESC LIMIT 1").fetchone()
         db.close()
-        return dict(recent_thong_bao=recent_tb, latest_thong_bao=latest_tb, admin_pinned_thong_bao=dict(admin_pinned) if admin_pinned else None)
+        res = dict(recent_thong_bao=recent_tb, latest_thong_bao=latest_tb, admin_pinned_thong_bao=dict(admin_pinned) if admin_pinned else None, unread_red_alerts_count=red_alerts)
+        _thong_bao_cache['time'] = now
+        _thong_bao_cache['data'] = res
+        return res
     except Exception:
-        return dict(recent_thong_bao=[], latest_thong_bao=None, admin_pinned_thong_bao=None)
+        return dict(recent_thong_bao=[], latest_thong_bao=None, admin_pinned_thong_bao=None, unread_red_alerts_count=red_alerts)
+
+_last_activation_check = 0
 
 @app.before_request
 def check_contract_activation():
-    if request.path.startswith('/static'):
+    global _last_activation_check
+    if request.path.startswith('/static') or request.endpoint == 'static':
         return
+    now = time.time()
+    if now - _last_activation_check < 30:
+        return
+    _last_activation_check = now
+    
     db = get_db()
     try:
-        cursor = db.cursor()
-        # 1. Tự động di cư các phiếu cọc cũ chưa có HĐ
-        old_bookings = cursor.execute(
-            """
-            SELECT tk.*, ts.HanThanhToan
-            FROM THONG_TIN_CHOT_KHACH tk
-            JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan
-            WHERE tk.MaHopDong IS NULL AND tk.TrangThai = 'Da Duyet'
-            """
-        ).fetchall()
-        
-        if old_bookings:
-            for b in old_bookings:
-                cursor.execute(
-                    "INSERT INTO KHACH_THUE (HoTen, SoDienThoai, CCCD) VALUES (?, ?, ?)",
-                    (b['TenKhach'], b['SoDienThoaiKhach'], b['CCCD'])
-                )
-                khach_thue_id = cursor.lastrowid
-                
-                duration = 6
-                start_dt = datetime.strptime(b['NgayDuKienVaoO'], '%Y-%m-%d').date()
-                end_dt = add_months(start_dt, duration)
-                
-                cursor.execute(
-                    """
-                    INSERT INTO HOP_DONG (MaTaiSan, MaKhachThue, NgayBatDau, NgayKetThuc, ThoiHanThue, TienCoc, TrangThai, GhiChu, GiaThue)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Giữ phòng', ?, ?)
-                    """,
-                    (b['MaTaiSan'], khach_thue_id, b['NgayDuKienVaoO'], end_dt.isoformat(), duration, b['TienCoc'], b['GhiChu'], b['GiaThue'])
-                )
-                hop_dong_id = cursor.lastrowid
-                
-                han_thanh_toan = b['HanThanhToan'] if b['HanThanhToan'] is not None else 15
-                if start_dt.day < han_thanh_toan:
-                    next_ca_thu = date(start_dt.year, start_dt.month, han_thanh_toan)
-                else:
-                    next_month = start_dt.month + 1
-                    next_year = start_dt.year
-                    if next_month > 12:
-                        next_month = 1
-                        next_year += 1
-                    next_ca_thu = date(next_year, next_month, han_thanh_toan)
-                    
-                actual_days = (next_ca_thu - start_dt).days
-                if actual_days > 30:
-                    actual_days = 30
-                tien_nha_le = (b['GiaThue'] / 30.0) * actual_days
-                
-                config = cursor.execute("SELECT * FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
-                gia_dien = config['GiaDien'] if config else 4000.00
-                gia_dv = config['GiaDichVu'] if config else 250000.00
-                tien_dich_vu_le = ((gia_dv / 1000.0) / 30.0) * actual_days
-                tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + b['TienCoc']
-                
-                cursor.execute(
-                    """
-                    INSERT INTO HOA_DON 
-                    (MaHopDong, Thang, Nam, TienNha, SoDien, GiaDien, TienDien, GiaDichVu, TienDichVu, TongTien, NgayTao, TrangThaiThanhToan)
-                    VALUES (?, ?, ?, ?, 0, ?, 0.00, ?, ?, ?, ?, 'Chưa thanh toán')
-                    """,
-                    (hop_dong_id, start_dt.month, start_dt.year, tien_nha_le, gia_dien, gia_dv, tien_dich_vu_le, tong_tien_hoa_don_1, date.today().isoformat())
-                )
-                
-                cursor.execute(
-                    """
-                    UPDATE THONG_TIN_CHOT_KHACH 
-                    SET TrangThai = 'Da Chuyen Thanh Hop Dong', MaKhachThue = ?, MaHopDong = ?
-                    WHERE MaChotKhach = ?
-                    """,
-                    (khach_thue_id, hop_dong_id, b['MaChotKhach'])
-                )
-                
-                cursor.execute(
-                    "UPDATE TAI_SAN SET TrangThai = 'Giữ phòng' WHERE MaTaiSan = ?",
-                    (b['MaTaiSan'],)
-                )
-            db.commit()
-
-        # 2. Lập lịch tự động kích hoạt hợp đồng (Chỉ kích hoạt khi đóng đủ tiền hệ thống tính hoặc đã thanh toán hóa đơn đầu)
-        today_str = date.today().isoformat()
+        # Lập lịch tự động kích hoạt hợp đồng (Chỉ kích hoạt khi cọc đủ tiền hoặc hóa đơn đầu đã thanh toán)
         contracts = db.execute(
             """
             SELECT h.MaHopDong, h.MaTaiSan, h.TienCoc, 
@@ -185,8 +192,11 @@ def check_contract_activation():
         ).fetchall()
         if contracts:
             for c in contracts:
-                # Điều kiện: Không có hóa đơn, HOẶC cọc đủ tiền, HOẶC hóa đơn đầu đã thanh toán
-                if (c['TongTienHoaDon'] is None) or (c['TienCoc'] >= c['TongTienHoaDon']) or (c['TinhTrangHoaDon'] == 'Đã thanh toán'):
+                if (c['TongTienHoaDon'] is None) or (c['TienCoc'] >= (c['TongTienHoaDon'] - 1)) or (c['TinhTrangHoaDon'] == 'Đã thanh toán'):
+                    db.execute(
+                        "UPDATE HOA_DON SET TrangThaiThanhToan = 'Đã thanh toán' WHERE MaHopDong = ? AND TrangThaiThanhToan = 'Chưa thanh toán'",
+                        (c['MaHopDong'],)
+                    )
                     db.execute(
                         "UPDATE HOP_DONG SET TrangThai = 'Đang kích hoạt' WHERE MaHopDong = ?",
                         (c['MaHopDong'],)
@@ -197,10 +207,9 @@ def check_contract_activation():
                     )
             db.commit()
     except Exception as e:
-        print("Lỗi tự động kích hoạt/di cư hợp đồng:", e)
+        print("Lỗi tự động kích hoạt hợp đồng:", e)
     finally:
         db.close()
-
 
 # Helper decorator for authentication
 def login_required(f):
@@ -401,6 +410,26 @@ def sale_bookings():
         """, (user_id,)
     ).fetchall()
     
+    today = date.today()
+    contracts_list = []
+    for c in my_contracts:
+        c_dict = dict(c)
+        try:
+            start_d = datetime.strptime(c['NgayBatDau'], '%Y-%m-%d').date()
+            end_d = datetime.strptime(c['NgayKetThuc'], '%Y-%m-%d').date()
+            days_from_start = (today - start_d).days
+            days_to_end = (end_d - today).days
+            c_dict['IsNew'] = (0 <= days_from_start <= 30)
+            c_dict['IsExpired'] = (days_to_end < 0)
+            c_dict['IsExpiringSoon'] = (0 <= days_to_end <= 30)
+            c_dict['DaysRemaining'] = days_to_end
+        except Exception:
+            c_dict['IsNew'] = False
+            c_dict['IsExpired'] = False
+            c_dict['IsExpiringSoon'] = False
+            c_dict['DaysRemaining'] = 999
+        contracts_list.append(c_dict)
+    
     # 3. Khách thuê của bản thân Sale này
     my_tenants = db.execute(
         """
@@ -420,7 +449,7 @@ def sale_bookings():
     return render_template(
         'sale_bookings.html',
         bookings=my_bookings,
-        contracts=my_contracts,
+        contracts=contracts_list,
         tenants=my_tenants,
         current_date=current_date
     )
@@ -542,13 +571,15 @@ def sale_chot_coc(room_id):
             tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + gia_thue
             
             # 4. Thêm bản ghi hóa đơn
+            # Nếu khách đã đóng đủ tiền đợt 1 (1 cọc 1 kỳ đầu, deposit_amount >= tong_tien_hoa_don_1 - 1)
+            trang_thai_hd1 = 'Đã thanh toán' if deposit_amount >= (tong_tien_hoa_don_1 - 1) else 'Chưa thanh toán'
             cursor.execute(
                 """
                 INSERT INTO HOA_DON 
                 (MaHopDong, Thang, Nam, TienNha, SoDien, GiaDien, TienDien, GiaDichVu, TienDichVu, TongTien, NgayTao, TrangThaiThanhToan)
-                VALUES (?, ?, ?, ?, 0, ?, 0.00, ?, ?, ?, ?, 'Chưa thanh toán')
+                VALUES (?, ?, ?, ?, 0, ?, 0.00, ?, ?, ?, ?, ?)
                 """,
-                (hop_dong_id, start_dt.month, start_dt.year, tien_nha_le, gia_dien, gia_dv, tien_dich_vu_le, tong_tien_hoa_don_1, date.today().isoformat())
+                (hop_dong_id, start_dt.month, start_dt.year, tien_nha_le, gia_dien, gia_dv, tien_dich_vu_le, tong_tien_hoa_don_1, date.today().isoformat(), trang_thai_hd1)
             )
             
             # 5. Ghi nhận chốt khách
@@ -561,9 +592,12 @@ def sale_chot_coc(room_id):
                 (room_id, session['user_id'], tenant_name, tenant_phone, tenant_cccd, deposit_amount, date.today().isoformat(), move_in_date, elec_start, khach_thue_id, hop_dong_id, notes, gia_thue)
             )
             
-            # 6. Khóa phòng lập tức ở trạng thái 'Giữ phòng'
+            # 6. Khóa phòng lập tức ở trạng thái Đang thuê (nếu đã đóng đủ tiền) hoặc Giữ phòng (nếu cọc một phần)
+            room_status = 'DangThue' if trang_thai_hd1 == 'Đã thanh toán' else 'Giữ phòng'
+            contract_status = 'Đang kích hoạt' if trang_thai_hd1 == 'Đã thanh toán' else 'Giữ phòng'
+            cursor.execute("UPDATE HOP_DONG SET TrangThai = ? WHERE MaHopDong = ?", (contract_status, hop_dong_id))
             cursor.execute(
-                "UPDATE TAI_SAN SET TrangThai = 'Giữ phòng' WHERE MaTaiSan = ?", (room_id,)
+                "UPDATE TAI_SAN SET TrangThai = ?, GiaThue = ? WHERE MaTaiSan = ?", (room_status, gia_thue, room_id)
             )
             
             # 7. Tự động phát thông báo tức thì lên toàn hệ thống để các Sale khác không tư vấn trùng
@@ -821,11 +855,241 @@ def sale_booking_cancel(deal_id):
         
     return redirect(url_for('sale_bookings'))
 
+@app.route('/sale/contract/renew/<int:contract_id>', methods=['POST'])
+@role_required([3])
+def sale_contract_renew(contract_id):
+    user_id = session['user_id']
+    db = get_db()
+    contract = db.execute(
+        """
+        SELECT hd.*, ts.SoPhong, ts.DiaChi, kt.HoTen as TenKhach
+        FROM HOP_DONG hd
+        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
+        JOIN KHACH_THUE kt ON hd.MaKhachThue = kt.MaKhachThue
+        JOIN THONG_TIN_CHOT_KHACH tk ON hd.MaHopDong = tk.MaHopDong
+        WHERE hd.MaHopDong = ? AND tk.MaTaiKhoanChot = ?
+        """, (contract_id, user_id)
+    ).fetchone()
+    
+    if not contract:
+        db.close()
+        flash("Hợp đồng không tồn tại hoặc không thuộc quyền quản lý của bạn!", "error")
+        return redirect(url_for('sale_bookings'))
+        
+    duration_months = int(request.form.get('duration_months', 6))
+    new_price = request.form.get('new_price')
+    new_price = float(new_price) if new_price else float(contract['GiaThue'])
+    notes = request.form.get('notes', '')
+    
+    # Tính ngày bắt đầu và ngày kết thúc gia hạn
+    old_end = datetime.strptime(contract['NgayKetThuc'], '%Y-%m-%d').date()
+    today_d = date.today()
+    if old_end >= today_d:
+        new_start = old_end + timedelta(days=1)
+    else:
+        new_start = today_d
+    new_end = add_months(new_start, duration_months)
+    
+    hoa_hong_gia_han = 60.0  # 60k VND
+    
+    try:
+        old_data = dict(contract)
+        # 1. Lưu bản ghi vào bảng GIA_HAN_HOP_DONG
+        db.execute(
+            """
+            INSERT INTO GIA_HAN_HOP_DONG 
+            (MaHopDong, MaTaiKhoanSale, NgayGiaHan, NgayBatDauMoi, NgayKetThucMoi, SoThangGiaHan, GiaThueMoi, HoaHongGiaHan, GhiChu)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (contract_id, user_id, today_d.isoformat(), new_start.isoformat(), new_end.isoformat(), duration_months, new_price, hoa_hong_gia_han, notes)
+        )
+        
+        # 2. Cập nhật HĐ
+        db.execute(
+            """
+            UPDATE HOP_DONG 
+            SET NgayKetThuc = ?, ThoiHanThue = ThoiHanThue + ?, GiaThue = ?, TrangThai = 'Đang kích hoạt'
+            WHERE MaHopDong = ?
+            """,
+            (new_end.isoformat(), duration_months, new_price, contract_id)
+        )
+        
+        # 3. Tạo thông báo chung
+        sale_name = session.get('fullname', 'Sale')
+        db.execute(
+            """
+            INSERT INTO THONG_BAO (NoiDung, TrangThai, LoaiThongBao, IsGhim)
+            VALUES (?, 1, 'CHOT', 0)
+            """,
+            (f"{sale_name}: Gia hạn HĐ-{contract_id:03d} (Phòng {contract['SoPhong']} {contract['DiaChi']}) thêm {duration_months} tháng 🎉",)
+        )
+        
+        # 4. Ghi Audit Log
+        new_data = dict(db.execute("SELECT * FROM HOP_DONG WHERE MaHopDong = ?", (contract_id,)).fetchone())
+        log_audit(db, "Gia Hạn Hợp Đồng", "HOP_DONG", du_lieu_cu=old_data, du_lieu_moi=new_data, ghi_chu=f"Gia hạn HĐ-{contract_id:03d} thêm {duration_months} tháng (+60k hoa hồng)")
+        
+        db.commit()
+        flash(f"Gia hạn hợp đồng HĐ-{contract_id:03d} thành công! Bạn nhận được +60.000đ hoa hồng gia hạn.", "success")
+    except Exception as e:
+        db.rollback()
+        flash(f"Lỗi khi gia hạn hợp đồng: {str(e)}", "error")
+    finally:
+        db.close()
+        
+    return redirect(url_for('sale_bookings'))
+
+
+@app.route('/sale/salary')
+@role_required([3])
+def sale_salary():
+    user_id = session['user_id']
+    db = get_db()
+    
+    today = date.today()
+    try:
+        month = int(request.args.get('month', today.month))
+        year = int(request.args.get('year', today.year))
+    except (ValueError, TypeError):
+        month = today.month
+        year = today.year
+        
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year+1}-01-01"
+    else:
+        end_date = f"{year}-{month+1:02d}-01"
+        
+    # Thông tin Sale và KPI
+    sale_info = db.execute("SELECT HoTen, LuongCung, SoDienThoai FROM TAI_KHOAN WHERE MaTaiKhoan = ?", (user_id,)).fetchone()
+    luong_cung = float(sale_info['LuongCung'] if sale_info and sale_info['LuongCung'] else 0.0)
+    
+    config = db.execute("SELECT ChiTieuKPI FROM CAU_HINH_GIA WHERE TrangThai = 1 LIMIT 1").fetchone()
+    chi_tieu_kpi = config['ChiTieuKPI'] if config else 6
+    
+    # 1. Danh sách phòng chốt mới trong tháng
+    deals = db.execute(
+        """
+        SELECT tk.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, ts.GiaThue as GiaThuePhong, ts.HoaHong as HoaHongTaiSan,
+               kt.HoTen as TenKhachThue, hd.MaHopDong, hd.TrangThai as TrangThaiHopDong
+        FROM THONG_TIN_CHOT_KHACH tk
+        JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan
+        LEFT JOIN KHACH_THUE kt ON tk.MaKhachThue = kt.MaKhachThue
+        LEFT JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
+        WHERE tk.MaTaiKhoanChot = ? AND tk.NgayChot >= ? AND tk.NgayChot < ?
+        ORDER BY tk.NgayChot DESC
+        """, (user_id, start_date, end_date)
+    ).fetchall()
+    
+    # 2. Danh sách hợp đồng gia hạn trong tháng (mỗi HĐ +60k)
+    renewals = db.execute(
+        """
+        SELECT gh.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, kt.HoTen as TenKhach, kt.SoDienThoai,
+               hd.NgayBatDau, hd.NgayKetThuc as NgayKetThucHienTai
+        FROM GIA_HAN_HOP_DONG gh
+        JOIN HOP_DONG hd ON gh.MaHopDong = hd.MaHopDong
+        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
+        JOIN KHACH_THUE kt ON hd.MaKhachThue = kt.MaKhachThue
+        WHERE gh.MaTaiKhoanSale = ? AND gh.NgayGiaHan >= ? AND gh.NgayGiaHan < ?
+        ORDER BY gh.NgayGiaHan DESC
+        """, (user_id, start_date, end_date)
+    ).fetchall()
+    
+    so_phong_chot = len(deals)
+    hoa_hong_chot = sum(float(d['HoaHongTaiSan'] or 0.0) for d in deals)
+    
+    so_gia_han = len(renewals)
+    hoa_hong_gia_han = sum(float(r['HoaHongGiaHan'] or 60.0) for r in renewals)
+    
+    dat_kpi = so_phong_chot >= chi_tieu_kpi
+    luong_cung_nhan = luong_cung if dat_kpi else 0.0
+    tong_thu_nhap = luong_cung_nhan + hoa_hong_chot + hoa_hong_gia_han
+    
+    # 3. Lịch sử bảng lương 12 tháng trong năm được chọn (Tối ưu thành 2 grouped queries duy nhất)
+    year_start = f"{year}-01-01"
+    year_end = f"{year+1}-01-01"
+    
+    deals_rows = db.execute(
+        """
+        SELECT CAST(strftime('%m', tk.NgayChot) AS INTEGER) as Thang, 
+               COUNT(*) as count, 
+               SUM(ts.HoaHong) as total_hh 
+        FROM THONG_TIN_CHOT_KHACH tk 
+        JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan 
+        WHERE tk.MaTaiKhoanChot = ? AND tk.NgayChot >= ? AND tk.NgayChot < ?
+        GROUP BY Thang
+        """, (user_id, year_start, year_end)
+    ).fetchall()
+    deals_by_month = {row['Thang']: row for row in deals_rows}
+        
+    renewals_rows = db.execute(
+        """
+        SELECT CAST(strftime('%m', NgayGiaHan) AS INTEGER) as Thang, 
+               COUNT(*) as count, 
+               SUM(HoaHongGiaHan) as total_hh 
+        FROM GIA_HAN_HOP_DONG 
+        WHERE MaTaiKhoanSale = ? AND NgayGiaHan >= ? AND NgayGiaHan < ?
+        GROUP BY Thang
+        """, (user_id, year_start, year_end)
+    ).fetchall()
+    renewals_by_month = {row['Thang']: row for row in renewals_rows}
+
+    monthly_history = []
+    for m in range(1, 13):
+        m_deals = deals_by_month.get(m)
+        m_renewals = renewals_by_month.get(m)
+        
+        m_chot = (m_deals['count'] if m_deals else 0) or 0
+        m_hh_chot = float((m_deals['total_hh'] if m_deals else 0.0) or 0.0)
+        m_gh = (m_renewals['count'] if m_renewals else 0) or 0
+        m_hh_gh = float((m_renewals['total_hh'] if m_renewals else 0.0) or 0.0)
+        m_kpi = m_chot >= chi_tieu_kpi
+        m_lc = luong_cung if m_kpi else 0.0
+        m_tong = m_lc + m_hh_chot + m_hh_gh
+        
+        monthly_history.append({
+            'Thang': m,
+            'Nam': year,
+            'SoPhongChot': m_chot,
+            'HoaHongChot': m_hh_chot,
+            'SoGiaHan': m_gh,
+            'HoaHongGiaHan': m_hh_gh,
+            'DatKPI': m_kpi,
+            'LuongCung': m_lc,
+            'TongThuNhap': m_tong,
+            'IsSelected': (m == month)
+        })
+        
+    db.close()
+    
+    return render_template(
+        'sale_salary.html',
+        month=month,
+        year=year,
+        sale_info=sale_info,
+        chi_tieu_kpi=chi_tieu_kpi,
+        deals=deals,
+        renewals=renewals,
+        so_phong_chot=so_phong_chot,
+        hoa_hong_chot=hoa_hong_chot,
+        so_gia_han=so_gia_han,
+        hoa_hong_gia_han=hoa_hong_gia_han,
+        dat_kpi=dat_kpi,
+        luong_cung=luong_cung,
+        luong_cung_nhan=luong_cung_nhan,
+        tong_thu_nhap=tong_thu_nhap,
+        monthly_history=monthly_history
+    )
+
 # ==========================================
 # PHÂN HỆ DÀNH CHO NHÂN VIÊN VẬN HÀNH (ROLE = 2)
 # ==========================================
 
 
+
+@app.route('/manager/dashboard')
+@role_required([1, 2])
+def manager_dashboard():
+    return redirect(url_for('manager_thanhtoan'))
 
 @app.route('/manager/ca-thu')
 @role_required([2])
@@ -841,19 +1105,35 @@ def manager_ca_thu():
         "SELECT * FROM TAI_SAN WHERE HanThanhToan = ? ORDER BY KhuVuc, DiaChi, SoPhong", (day,)
     ).fetchall()
     
+    # Lấy thông tin chốt mới nhất của các phòng trong 1 truy vấn duy nhất
+    latest_deals_rows = db.execute(
+        """
+        SELECT tk.*
+        FROM THONG_TIN_CHOT_KHACH tk
+        INNER JOIN (
+            SELECT MaTaiSan, MAX(MaChotKhach) as max_id
+            FROM THONG_TIN_CHOT_KHACH
+            GROUP BY MaTaiSan
+        ) latest ON tk.MaTaiSan = latest.MaTaiSan AND tk.MaChotKhach = latest.max_id
+        """
+    ).fetchall()
+    deals_by_room = {d['MaTaiSan']: d for d in latest_deals_rows}
+
+    # Lấy danh sách phòng có nợ quá hạn trong 1 truy vấn duy nhất
+    overdue_rows = db.execute(
+        """
+        SELECT DISTINCT h.MaTaiSan
+        FROM HOA_DON hd
+        JOIN HOP_DONG h ON hd.MaHopDong = h.MaHopDong
+        WHERE h.TrangThai IN ('Đang kích hoạt', 'Giữ phòng') AND hd.TrangThaiThanhToan = 'Chưa thanh toán'
+        """
+    ).fetchall()
+    overdue_room_ids = {row['MaTaiSan'] for row in overdue_rows}
+
     rooms = []
     for r in rooms_list:
         room_dict = dict(r)
-        
-        # Lấy thông tin chốt khách mới nhất cho phòng này
-        deal = db.execute(
-            """
-            SELECT * FROM THONG_TIN_CHOT_KHACH 
-            WHERE MaTaiSan = ? 
-            ORDER BY MaChotKhach DESC LIMIT 1
-            """, (r['MaTaiSan'],)
-        ).fetchone()
-        
+        deal = deals_by_room.get(r['MaTaiSan'])
         if deal:
             room_dict['TenKhachChot'] = deal['TenKhach']
             room_dict['SdtKhachChot'] = deal['SoDienThoaiKhach']
@@ -865,12 +1145,8 @@ def manager_ca_thu():
             room_dict['TienCocChot'] = None
             room_dict['DienDauVaoChot'] = None
             
-        overdue_inv = db.execute(
-            "SELECT COUNT(*) as count FROM HOA_DON hd JOIN HOP_DONG h ON hd.MaHopDong = h.MaHopDong WHERE h.MaTaiSan = ? AND hd.TrangThaiThanhToan = 'Chưa thanh toán'",
-            (r['MaTaiSan'],)
-        ).fetchone()
-        room_dict['HasOverdue'] = overdue_inv['count'] > 0
-            
+        room_dict['HasOverdue'] = r['MaTaiSan'] in overdue_room_ids
+        room_dict['GiaThueThucTe'] = deal['GiaThue'] if (deal and deal['GiaThue']) else r['GiaThue']
         rooms.append(room_dict)
         
     db.close()
@@ -978,14 +1254,19 @@ def manager_hop_dong(room_id):
             tong_tien_hoa_don_1 = tien_nha_le + tien_dich_vu_le + deposit_received
             
             # 4. Thêm bản ghi hóa đơn
+            trang_thai_hd1 = 'Đã thanh toán' if deposit_received >= (tong_tien_hoa_don_1 - 1) else 'Chưa thanh toán'
             cursor.execute(
                 """
                 INSERT INTO HOA_DON 
                 (MaHopDong, Thang, Nam, TienNha, SoDien, GiaDien, TienDien, GiaDichVu, TienDichVu, TongTien, NgayTao, TrangThaiThanhToan)
-                VALUES (?, ?, ?, ?, 0, ?, 0.00, ?, ?, ?, ?, 'Chưa thanh toán')
+                VALUES (?, ?, ?, ?, 0, ?, 0.00, ?, ?, ?, ?, ?)
                 """,
-                (hop_dong_id, start_dt.month, start_dt.year, tien_nha_le, gia_dien, gia_dv, tien_dich_vu_le, tong_tien_hoa_don_1, date.today().isoformat())
+                (hop_dong_id, start_dt.month, start_dt.year, tien_nha_le, gia_dien, gia_dv, tien_dich_vu_le, tong_tien_hoa_don_1, date.today().isoformat(), trang_thai_hd1)
             )
+            
+            # Cập nhật trạng thái hợp đồng
+            contract_status = 'Đang kích hoạt' if trang_thai_hd1 == 'Đã thanh toán' else 'Giữ phòng'
+            cursor.execute("UPDATE HOP_DONG SET TrangThai = ? WHERE MaHopDong = ?", (contract_status, hop_dong_id))
             
             # 5. Cập nhật trạng thái phòng thành Đang thuê
             cursor.execute(
@@ -1124,6 +1405,16 @@ def manager_dien_nuoc_form(room_id):
             )
             invoice_id = cursor.lastrowid
             
+            # Ghi nhật ký kiểm toán cho chỉ số điện
+            log_audit(
+                db,
+                'Nhập Chỉ Số Điện',
+                'CHI_SO_DIEN',
+                du_lieu_cu={'SoPhong': room['SoPhong'], 'DiaChi': room['DiaChi'], 'ChiSoCu': old_index},
+                du_lieu_moi={'SoPhong': room['SoPhong'], 'DiaChi': room['DiaChi'], 'ChiSoCu': old_index, 'ChiSoMoi': new_index, 'SoDien': power_consumed},
+                ghi_chu=f"Nhập chỉ số điện tháng {month}/{year} phòng {room['SoPhong']} - {room['DiaChi']} (Tiêu thụ: {power_consumed} kWh)"
+            )
+            
             db.commit()
             flash(f"Đã chốt số điện phòng {room['SoPhong']} tháng {month}/{year}. Tổng hóa đơn: {tong_tien:,.2f}k.", "success")
             return redirect(url_for('shared_invoice_view', invoice_id=invoice_id))
@@ -1189,19 +1480,38 @@ def manager_kho():
                 )
                 
                 # 3. Nối chuỗi vào danh sách thiết bị của phòng nhận
+                room_desc = "Kho chung / Khác"
                 if room_id:
-                    room = db.execute("SELECT ThietBi, SoPhong FROM TAI_SAN WHERE MaTaiSan = ?", (room_id,)).fetchone()
-                    thiet_bi_cu = room['ThietBi']
-                    ten_thiet_bi = vat_tu['TenVatTu']
-                    
-                    if thiet_bi_cu:
-                        thiet_bi_moi = f"{thiet_bi_cu}, Lắp thêm {quantity} {ten_thiet_bi}"
-                    else:
-                        thiet_bi_moi = f"Lắp thêm {quantity} {ten_thiet_bi}"
+                    room = db.execute("SELECT ThietBi, SoPhong, DiaChi FROM TAI_SAN WHERE MaTaiSan = ?", (room_id,)).fetchone()
+                    if room:
+                        room_desc = f"Phòng {room['SoPhong']} ({room['DiaChi']})"
+                        thiet_bi_cu = room['ThietBi']
+                        ten_thiet_bi = vat_tu['TenVatTu']
                         
-                    db.execute(
-                        "UPDATE TAI_SAN SET ThietBi = ? WHERE MaTaiSan = ?", (thiet_bi_moi, room_id)
-                    )
+                        if thiet_bi_cu:
+                            thiet_bi_moi = f"{thiet_bi_cu}, Lắp thêm {quantity} {ten_thiet_bi}"
+                        else:
+                            thiet_bi_moi = f"Lắp thêm {quantity} {ten_thiet_bi}"
+                            
+                        db.execute(
+                            "UPDATE TAI_SAN SET ThietBi = ? WHERE MaTaiSan = ?", (thiet_bi_moi, room_id)
+                        )
+                
+                # Ghi Audit Log cho Xuất kho vật tư
+                log_audit(
+                    db,
+                    'Xuất Kho Vật Tư',
+                    'LICH_SU_KHO',
+                    du_lieu_cu={'VatTu': vat_tu['TenVatTu'], 'TonKhoCu': vat_tu['SoLuongTon']},
+                    du_lieu_moi={
+                        'VatTu': vat_tu['TenVatTu'],
+                        'SoLuongXuat': quantity,
+                        'TonKhoMoi': vat_tu['SoLuongTon'] - quantity,
+                        'PhongNhan': room_desc,
+                        'LyDo': reason
+                    },
+                    ghi_chu=f"Xuất {quantity} {vat_tu['TenVatTu']} lắp đặt cho {room_desc}. Lý do: {reason or 'Không ghi chú'}"
+                )
                     
             db.commit()
             flash("Thực hiện giao dịch kho thành công!", "success")
@@ -1501,29 +1811,76 @@ def admin_employees_edit(user_id):
 @role_required([1])
 def admin_audit_log():
     db = get_db()
+    now = datetime.now()
     
-    selected_month = request.args.get('month', '')
-    selected_year = request.args.get('year', '')
+    # Mặc định chỉ hiển thị log hoạt động của tháng hiện tại (ví dụ: tháng 10)
+    if 'month' not in request.args:
+        selected_month = str(now.month)
+    else:
+        selected_month = request.args.get('month', '')
+        
+    if 'year' not in request.args:
+        selected_year = str(now.year)
+    else:
+        selected_year = request.args.get('year', '')
+        
     selected_action = request.args.get('action', '')
+    selected_risk = request.args.get('risk', '')
+    selected_status = request.args.get('status', '')
     
     query = "SELECT * FROM AUDIT_LOG WHERE 1=1"
     params = []
     
-    if selected_year:
+    if selected_year and selected_year != 'all':
         query += " AND strftime('%Y', ThoiGian) = ?"
         params.append(str(selected_year))
         
-    if selected_month:
+    if selected_month and selected_month != 'all':
         query += " AND CAST(strftime('%m', ThoiGian) AS INTEGER) = ?"
         params.append(int(selected_month))
         
     if selected_action:
         query += " AND HanhDong LIKE ?"
         params.append(f"%{selected_action}%")
+
+    if selected_risk == 'red':
+        query += " AND PhanLoaiRuiRo = 'Báo động đỏ'"
+    elif selected_risk == 'yellow':
+        query += " AND PhanLoaiRuiRo = 'Cần lưu ý'"
+    elif selected_risk == 'green':
+        query += " AND (PhanLoaiRuiRo = 'An toàn' OR PhanLoaiRuiRo IS NULL)"
+
+    if selected_status == 'pending':
+        query += " AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)"
+    elif selected_status == 'verified':
+        query += " AND TrangThaiXuLy = 'Đã xác minh'"
+    elif selected_status == 'disputed':
+        query += " AND TrangThaiXuLy = 'Cần giải trình'"
         
-    query += " ORDER BY MaLog DESC LIMIT 200"
+    query += " ORDER BY MaLog DESC LIMIT 300"
     
     logs = db.execute(query, params).fetchall()
+    
+    # Thống kê tổng quan KPI rủi ro
+    stats_row = db.execute(
+        """
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN PhanLoaiRuiRo = 'Báo động đỏ' THEN 1 ELSE 0 END) as red_count,
+            SUM(CASE WHEN PhanLoaiRuiRo = 'Cần lưu ý' THEN 1 ELSE 0 END) as yellow_count,
+            SUM(CASE WHEN PhanLoaiRuiRo = 'An toàn' OR PhanLoaiRuiRo IS NULL THEN 1 ELSE 0 END) as green_count,
+            SUM(CASE WHEN PhanLoaiRuiRo = 'Báo động đỏ' AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL) THEN 1 ELSE 0 END) as pending_red_count
+        FROM AUDIT_LOG
+        """
+    ).fetchone()
+    
+    stats = {
+        'total': stats_row['total_count'] or 0,
+        'red': stats_row['red_count'] or 0,
+        'yellow': stats_row['yellow_count'] or 0,
+        'green': stats_row['green_count'] or 0,
+        'pending_red': stats_row['pending_red_count'] or 0
+    }
     
     # Lấy danh sách các năm có trong log
     years_db = db.execute("SELECT DISTINCT strftime('%Y', ThoiGian) as Nam FROM AUDIT_LOG WHERE ThoiGian IS NOT NULL ORDER BY Nam DESC").fetchall()
@@ -1540,12 +1897,26 @@ def admin_audit_log():
     return render_template(
         'admin_audit_log.html', 
         logs=logs,
+        stats=stats,
         selected_month=selected_month,
         selected_year=selected_year,
         selected_action=selected_action,
+        selected_risk=selected_risk,
+        selected_status=selected_status,
         available_years=available_years,
         available_actions=available_actions
     )
+
+@app.route('/admin/audit-log/update-status/<int:log_id>', methods=['POST'])
+@role_required([1])
+def admin_audit_log_update_status(log_id):
+    db = get_db()
+    new_status = request.form.get('status', 'Đã xác minh')
+    db.execute("UPDATE AUDIT_LOG SET TrangThaiXuLy = ? WHERE MaLog = ?", (new_status, log_id))
+    db.commit()
+    db.close()
+    flash(f"Đã cập nhật trạng thái hồ sơ kiểm toán #{log_id} thành '{new_status}'!", "success")
+    return redirect(request.referrer or url_for('admin_audit_log'))
 
 @app.route('/admin/thong-bao', methods=['POST'])
 @role_required([1])
@@ -1724,6 +2095,8 @@ def shared_tracking():
             'HoTen': s['HoTen'],
             'SoPhongChot': 0,
             'HoaHong': 0.0,
+            'SoGiaHan': 0,
+            'HoaHongGiaHan': 0.0,
             'LuongCung': float(s['LuongCung'] if s['LuongCung'] else 0.0),
             'TongLuong': 0.0,
             'DatKPI': False
@@ -1734,6 +2107,22 @@ def shared_tracking():
         if sale_id in salary_summary_dict:
             salary_summary_dict[sale_id]['SoPhongChot'] += 1
             salary_summary_dict[sale_id]['HoaHong'] += float(b['HoaHongTaiSan'] or 0.0)
+
+    # Bổ sung hoa hồng từ các lượt gia hạn hợp đồng thành công (+60k/HĐ)
+    renewals_data = db.execute(
+        """
+        SELECT MaTaiKhoanSale, COUNT(*) as SoGiaHan, SUM(HoaHongGiaHan) as TongHoaHongGiaHan
+        FROM GIA_HAN_HOP_DONG
+        WHERE NgayGiaHan >= ? AND NgayGiaHan < ?
+        GROUP BY MaTaiKhoanSale
+        """, (start_date, end_date)
+    ).fetchall()
+    for r in renewals_data:
+        s_id = r['MaTaiKhoanSale']
+        if s_id in salary_summary_dict:
+            salary_summary_dict[s_id]['SoGiaHan'] = r['SoGiaHan']
+            salary_summary_dict[s_id]['HoaHongGiaHan'] = float(r['TongHoaHongGiaHan'] or 0.0)
+            salary_summary_dict[s_id]['HoaHong'] += float(r['TongHoaHongGiaHan'] or 0.0)
         
     for sale_id, stat in salary_summary_dict.items():
         if stat['SoPhongChot'] >= chi_tieu_kpi:
@@ -1802,19 +2191,24 @@ def shared_room_edit(room_id):
         nv_chot_cu = int(nv_chot_cu) if nv_chot_cu else None
         ngay_trong = request.form.get('ngay_trong')
         hoa_hong = float(request.form.get('hoa_hong'))
+        han_thanh_toan = request.form.get('han_thanh_toan')
+        han_thanh_toan = int(han_thanh_toan) if han_thanh_toan else (room['HanThanhToan'] if room['HanThanhToan'] is not None else 15)
         
         try:
+            room_old = dict(room)
             db.execute(
                 """
                 UPDATE TAI_SAN 
                 SET DiaChi = ?, SoPhong = ?, Tang = ?, GiaThue = ?, GhiChu = ?, ThietBi = ?, 
-                    NhanVienChotCu = ?, NgayTrong = ?, HoaHong = ?
+                    NhanVienChotCu = ?, NgayTrong = ?, HoaHong = ?, HanThanhToan = ?
                 WHERE MaTaiSan = ?
                 """,
-                (dia_chi, so_phong, tang, gia_thue, ghi_chu, thiet_bi, nv_chot_cu, ngay_trong, hoa_hong, room_id)
+                (dia_chi, so_phong, tang, gia_thue, ghi_chu, thiet_bi, nv_chot_cu, ngay_trong, hoa_hong, han_thanh_toan, room_id)
             )
+            room_new = db.execute("SELECT * FROM TAI_SAN WHERE MaTaiSan = ?", (room_id,)).fetchone()
+            log_audit(db, "Cập nhật Thông Tin Phòng", "TAI_SAN", du_lieu_cu=room_old, du_lieu_moi=room_new, ghi_chu=f"Cập nhật phòng {so_phong} - {dia_chi} (Ca thu mùng {han_thanh_toan})")
             db.commit()
-            flash("Cập nhật thông tin phòng trống thành công!", "success")
+            flash("Cập nhật thông tin phòng thành công!", "success")
         except Exception as e:
             db.rollback()
             flash(f"Lỗi khi cập nhật phòng: {str(e)}", "error")
@@ -1956,6 +2350,7 @@ def manager_thanhtoan():
     rooms_list = db.execute(
         """
         SELECT ts.*, 
+               COALESCE(hd.GiaThue, tk.GiaThue, ts.GiaThue) as GiaThueThucTe,
                hd.MaHopDong, hd.NgayBatDau, hd.NgayKetThuc, hd.TienCoc as TienCocHD, hd.TrangThai as TrangThaiHD,
                kt1.HoTen as TenKhachThue, kt1.SoDienThoai as SdtKhachThue,
                tk.MaChotKhach, tk.TenKhach as TenKhachChot, tk.SoDienThoaiKhach as SdtKhachChot, tk.TienCoc as TienCocChot, tk.SoDienDauVao
@@ -1967,6 +2362,17 @@ def manager_thanhtoan():
         """
     ).fetchall()
     
+    # Lấy danh sách tất cả các phòng có hóa đơn nợ trong 1 query duy nhất (giải quyết triệt để N+1)
+    overdue_rows = db.execute(
+        """
+        SELECT DISTINCT h.MaTaiSan 
+        FROM HOA_DON hd 
+        JOIN HOP_DONG h ON hd.MaHopDong = h.MaHopDong 
+        WHERE h.TrangThai IN ('Đang kích hoạt', 'Giữ phòng') AND hd.TrangThaiThanhToan = 'Chưa thanh toán'
+        """
+    ).fetchall()
+    overdue_room_ids = {row['MaTaiSan'] for row in overdue_rows}
+
     # Nhóm theo ca thu (HanThanhToan) -> Địa chỉ nhà (DiaChi) -> các phòng
     shifts = {}
     for r in rooms_list:
@@ -1982,13 +2388,7 @@ def manager_thanhtoan():
             }
             
         r_dict = dict(r)
-        overdue_inv = db.execute(
-            """SELECT COUNT(*) as count FROM HOA_DON hd 
-               JOIN HOP_DONG h ON hd.MaHopDong = h.MaHopDong 
-               WHERE h.MaTaiSan = ? AND hd.TrangThaiThanhToan = 'Chưa thanh toán'""",
-            (r['MaTaiSan'],)
-        ).fetchone()
-        r_dict['HasOverdue'] = overdue_inv['count'] > 0 if overdue_inv else False
+        r_dict['HasOverdue'] = r['MaTaiSan'] in overdue_room_ids
         
         if r_dict['HasOverdue']:
             shifts[day][address]['has_overdue'] = True
@@ -2068,7 +2468,7 @@ def shared_room_add():
 @role_required([1, 2])
 def shared_contracts():
     db = get_db()
-    contracts = db.execute(
+    raw_contracts = db.execute(
         """
         SELECT hd.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, ts.MaTaiSan, kt.HoTen as TenKhach, kt.SoDienThoai
         FROM HOP_DONG hd
@@ -2078,6 +2478,27 @@ def shared_contracts():
         """
     ).fetchall()
     db.close()
+    
+    today = date.today()
+    contracts = []
+    for c in raw_contracts:
+        c_dict = dict(c)
+        try:
+            start_d = datetime.strptime(c['NgayBatDau'], '%Y-%m-%d').date()
+            end_d = datetime.strptime(c['NgayKetThuc'], '%Y-%m-%d').date()
+            days_from_start = (today - start_d).days
+            days_to_end = (end_d - today).days
+            c_dict['IsNew'] = (0 <= days_from_start <= 30)
+            c_dict['IsExpired'] = (days_to_end < 0)
+            c_dict['IsExpiringSoon'] = (0 <= days_to_end <= 30)
+            c_dict['DaysRemaining'] = days_to_end
+        except Exception:
+            c_dict['IsNew'] = False
+            c_dict['IsExpired'] = False
+            c_dict['IsExpiringSoon'] = False
+            c_dict['DaysRemaining'] = 999
+        contracts.append(c_dict)
+        
     return render_template('shared_contracts.html', contracts=contracts)
 
 @app.route('/shared/contract/edit/<int:contract_id>', methods=['GET', 'POST'])
@@ -2139,7 +2560,15 @@ def shared_contract_edit(contract_id):
 @role_required([1, 2])
 def shared_contract_terminate(contract_id):
     db = get_db()
-    contract = db.execute("SELECT * FROM HOP_DONG WHERE MaHopDong = ?", (contract_id,)).fetchone()
+    contract = db.execute(
+        """
+        SELECT hd.*, ts.SoPhong, ts.DiaChi, ts.KhuVuc, ts.GiaThue as GiaThuePhong, kt.HoTen as TenKhach, kt.SoDienThoai
+        FROM HOP_DONG hd
+        JOIN TAI_SAN ts ON hd.MaTaiSan = ts.MaTaiSan
+        LEFT JOIN KHACH_THUE kt ON hd.MaKhachThue = kt.MaKhachThue
+        WHERE hd.MaHopDong = ?
+        """, (contract_id,)
+    ).fetchone()
     
     if not contract or contract['TrangThai'] != 'Đang kích hoạt':
         db.close()
@@ -2147,18 +2576,64 @@ def shared_contract_terminate(contract_id):
         return redirect(url_for('shared_contracts'))
         
     try:
-        # Cập nhật trạng thái hợp đồng thành Đã kết thúc
+        today = date.today()
+        # 1. Cập nhật trạng thái hợp đồng thành Đã kết thúc
         db.execute(
             "UPDATE HOP_DONG SET TrangThai = 'Đã kết thúc' WHERE MaHopDong = ?", (contract_id,)
         )
         
-        # Cập nhật trạng thái phòng thành Trống
+        # 2. Cập nhật trạng thái phòng thành Trống
         db.execute(
             "UPDATE TAI_SAN SET TrangThai = 'Trong' WHERE MaTaiSan = ?", (contract['MaTaiSan'],)
         )
         
+        # 3. Tính đúng số tiền phòng để hoàn cọc (1 cọc 1)
+        gia_phong = float(contract['GiaThue'] if contract['GiaThue'] else (contract['GiaThuePhong'] or 0.0))
+        if gia_phong <= 0 and contract['TienCoc']:
+            gia_phong = float(contract['TienCoc'])
+            
+        so_tien_hoan_coc = gia_phong * 1000 if 0 < gia_phong < 100000 else gia_phong
+        so_tien_vnd = round(so_tien_hoan_coc)
+        
+        ten_chi_phi = f"Hoàn cọc cho phòng {contract['SoPhong']} ({contract['DiaChi']})"
+        ghi_chu_chi = ""
+        ma_tai_khoan = session.get('user_id')
+        
+        # Thêm bản ghi chi phí hoàn cọc
+        db.execute(
+            """
+            INSERT INTO CHI_PHI (Thang, Nam, TenChiPhi, SoTien, NgayNhap, MaTaiKhoanNhap, GhiChu)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (today.month, today.year, ten_chi_phi, so_tien_vnd, today.isoformat(), ma_tai_khoan, ghi_chu_chi)
+        )
+        
+        # 4. Ghi Audit Log cho Thanh lý hợp đồng
+        log_audit(
+            db,
+            'Thanh Lý Hợp Đồng',
+            'HOP_DONG',
+            du_lieu_cu={
+                'MaHopDong': contract_id,
+                'SoPhong': contract['SoPhong'],
+                'TenKhach': contract['TenKhach'],
+                'TrangThai': contract['TrangThai'],
+                'NgayBatDau': contract['NgayBatDau'],
+                'NgayKetThuc': contract['NgayKetThuc'],
+                'GiaThue': contract['GiaThue']
+            },
+            du_lieu_moi={
+                'MaHopDong': contract_id,
+                'TrangThai': 'Đã kết thúc',
+                'TrangThaiPhong': 'Trong',
+                'TienHoanCoc': so_tien_vnd,
+                'TenChiPhi': ten_chi_phi
+            },
+            ghi_chu=f"Thanh lý HĐ #{contract_id:03d} phòng {contract['SoPhong']} ({contract['DiaChi']}). Tự động tạo khoản chi hoàn cọc {so_tien_vnd:,.0f} đ cho khách {contract['TenKhach'] or ''}."
+        )
+        
         db.commit()
-        flash("Thanh lý hợp đồng thành công. Phòng đã được chuyển về trạng thái Trống!", "success")
+        flash(f"Thanh lý hợp đồng thành công. Phòng {contract['SoPhong']} đã về Trống và hệ thống đã tự động ghi nhận chi phí hoàn cọc {so_tien_vnd:,.0f} đ!", "success")
     except Exception as e:
         db.rollback()
         flash(f"Lỗi khi thanh lý hợp đồng: {str(e)}", "error")

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title"><i class="fa-solid fa-list-check"></i> DANH SÁCH PHÒNG CHỐT CA MÙNG {{ day }}</h1>
-    <a href="{{ url_for('manager_dashboard') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Ca Thu</a>
+    <a href="{{ url_for('manager_thanhtoan') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại Ca Thu</a>
 </div>
 
 <div class="card">
@@ -32,7 +32,7 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ room.DiaChi }} ({{ room.KhuVuc }})</td>
                         <td><span class="badge {% if room.TrangThai == 'Trong' %}badge-trong{% elif room.TrangThai == 'Giữ phòng' %}badge-datcoc{% else %}badge-dangthue{% endif %}" {% if room.HasOverdue %}style="background-color: #dc2626;"{% endif %}>Phòng {{ room.SoPhong }} {% if room.HasOverdue %}⚠️{% endif %}</span></td>
-                        <td style="font-weight: 600; color: #fff;">{{ "{:,.2f}".format(room.GiaThue) }}</td>
+                        <td style="font-weight: 600; color: #fff;">{{ "{:,.2f}".format(room.GiaThueThucTe or room.GiaThue) }}</td>
                         <td>
                             {% if room.TienCocChot %}
                                 {{ "{:,.2f}".format(room.TienCocChot) }}
@@ -88,7 +88,9 @@
                                     </a>
                                 {% endif %}
                             {% else %}
-                                <span style="color: var(--text-muted); font-size: 0.85rem;">Không cần xử lý</span>
+                                <a href="{{ url_for('shared_room_edit', room_id=room.MaTaiSan) }}" class="btn btn-secondary btn-sm" style="width: 100%;">
+                                    <i class="fa-solid fa-pen-to-square"></i> Sửa thông tin
+                                </a>
                             {% endif %}
                         </td>
                     </tr>

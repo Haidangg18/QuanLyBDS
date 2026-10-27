@@ -149,6 +149,7 @@
                         <th>Thời Hạn (Tháng)</th>
                         <th>Tiền Cọc HĐ (VND)</th>
                         <th>Trạng Thái</th>
+                        <th style="text-align: center;">Hành Động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -156,7 +157,18 @@
                         {% for c in contracts %}
                         <tr>
                             <td style="text-align: center;">{{ loop.index }}</td>
-                            <td><code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code></td>
+                            <td style="position: relative; vertical-align: middle; min-width: 95px;">
+                                {% if c.IsExpiringSoon %}
+                                    <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a;" title="Còn {{ c.DaysRemaining }} ngày là hết hạn">Sắp hết hạn</span>
+                                {% elif c.IsExpired %}
+                                    <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">Hết hạn</span>
+                                {% elif c.IsNew %}
+                                    <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;" title="Hợp đồng mới ký trong vòng 30 ngày">Mới</span>
+                                {% endif %}
+                                <div style="{% if c.IsNew or c.IsExpiringSoon or c.IsExpired %}padding-top: 10px;{% endif %}">
+                                    <code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code>
+                                </div>
+                            </td>
                             <td><span class="badge badge-dangthue">Phòng {{ c.SoPhong }}</span></td>
                             <td>{{ c.DiaChi }} ({{ c.KhuVuc }})</td>
                             <td><strong>{{ c.TenKhach }}</strong></td>
@@ -174,11 +186,20 @@
                                     <span class="badge badge-secondary">Đã thanh lý</span>
                                 {% endif %}
                             </td>
+                            <td style="text-align: center; white-space: nowrap;">
+                                {% if c.TrangThai in ['Đang kích hoạt', 'Giữ phòng'] and (c.IsExpiringSoon or c.IsExpired) %}
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="openRenewModal('{{ c.MaHopDong }}', '{{ c.SoPhong }}', '{{ c.DiaChi }}', '{{ c.TenKhach }}', '{{ c.GiaThue }}', '{{ c.NgayKetThuc }}')" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;" title="Gia hạn hợp đồng">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Gia hạn
+                                    </button>
+                                {% else %}
+                                    <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="11" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Chưa có hợp đồng nào được ký kết thành công từ các lượt chốt khách của bạn.</td>
+                            <td colspan="12" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Chưa có hợp đồng nào được ký kết thành công từ các lượt chốt khách của bạn.</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -198,8 +219,17 @@
                         <div class="room-card-address">
                             <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ c.DiaChi }}
                         </div>
-                        <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                            <code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code>
+                        <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.25rem;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                <code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code>
+                                {% if c.IsExpiringSoon %}
+                                    <span style="font-size: 0.65rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a;">Sắp hết hạn</span>
+                                {% elif c.IsExpired %}
+                                    <span style="font-size: 0.65rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">Hết hạn</span>
+                                {% elif c.IsNew %}
+                                    <span style="font-size: 0.65rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">Mới</span>
+                                {% endif %}
+                            </div>
                             <span class="badge {% if c.TrangThai == 'Đang kích hoạt' %}badge-trong{% else %}badge-secondary{% endif %}">
                                 {% if c.TrangThai == 'Đang kích hoạt' %}
                                     Đang hiệu lực
@@ -227,6 +257,13 @@
                             <div style="margin-bottom: 0.25rem;"><strong>Bắt đầu:</strong> {{ c.NgayBatDau }}</div>
                             <div><strong>Kết thúc:</strong> {{ c.NgayKetThuc }}</div>
                         </div>
+                        {% if c.TrangThai in ['Đang kích hoạt', 'Giữ phòng'] and (c.IsExpiringSoon or c.IsExpired) %}
+                        <div style="margin-top: 0.75rem;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openRenewModal('{{ c.MaHopDong }}', '{{ c.SoPhong }}', '{{ c.DiaChi }}', '{{ c.TenKhach }}', '{{ c.GiaThue }}', '{{ c.NgayKetThuc }}')" style="width: 100%; padding: 0.45rem;">
+                                <i class="fa-solid fa-arrows-rotate"></i> Gia hạn
+                            </button>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 {% else %}
@@ -358,6 +395,65 @@
         </form>
     </div>
 </div>
+
+<!-- Modal Gia Hạn Hợp Đồng (+60k Hoa Hồng) -->
+<div id="renewModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 520px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--accent); font-weight: 700;">
+                <i class="fa-solid fa-arrows-rotate"></i> Gia Hạn Hợp Đồng Thuê
+            </h3>
+            <button type="button" onclick="closeRenewModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+        
+        <form id="renewForm" method="POST" action="">
+            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1)); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #065f46; font-size: 0.88rem; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-gift" style="font-size: 1.4rem; color: #059669;"></i>
+                <div>
+                    <strong style="color: #047857; font-size: 0.95rem;">Thưởng hoa hồng gia hạn: +60.000 VNĐ / HĐ</strong><br>
+                    <span style="font-size: 0.8rem; color: #065f46;">Khoản thưởng sẽ được ghi nhận và tự động cộng vào bảng lương tháng này của bạn.</span>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem; background: #f8fafc; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div id="renewRoomInfo" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;"></div>
+                <div id="renewTenantInfo" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;"></div>
+                <div id="renewCurrentEndDate" style="font-size: 0.85rem; color: #d97706; margin-top: 0.25rem; font-weight: 600;"></div>
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 0.75rem; margin-bottom: 0.85rem;">
+                <div style="flex: 1;">
+                    <label for="duration_months" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">Thời hạn gia hạn *</label>
+                    <select id="duration_months" name="duration_months" class="form-control" required style="width: 100%;">
+                        <option value="1">1 tháng</option>
+                        <option value="3">3 tháng</option>
+                        <option value="6" selected>6 tháng (Mặc định)</option>
+                        <option value="12">12 tháng (1 năm)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label for="renewPrice" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">Giá thuê mới (k VND) *</label>
+                    <input type="number" step="100" id="renewPrice" name="new_price" class="form-control" placeholder="Giá thuê..." required style="width: 100%;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="renewNotes" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">Ghi chú gia hạn</label>
+                <textarea id="renewNotes" name="notes" rows="2" class="form-control" placeholder="Ví dụ: Khách đồng ý ở thêm 6 tháng, giữ nguyên giá thuê..." style="font-size: 0.88rem; width: 100%;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; padding: 0.6rem 1rem;">
+                    <i class="fa-solid fa-arrows-rotate"></i> Xác nhận gia hạn
+                </button>
+                <button type="button" onclick="closeRenewModal()" class="btn btn-secondary" style="padding: 0.6rem 1rem;">
+                    Đóng
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -384,6 +480,21 @@ function openCancelModal(dealId, roomNumber, address, tenantName, deposit) {
     document.getElementById('modalRoomInfo').textContent = 'Phòng ' + roomNumber + ' (' + address + ') - Khách: ' + tenantName;
     document.getElementById('modalDepositInfo').textContent = 'Tiền cọc giữ chỗ: ' + deposit;
     document.getElementById('cancelModal').style.display = 'flex';
+}
+
+
+function openRenewModal(contractId, roomNumber, address, tenantName, rentPrice, currentEndDate) {
+    const form = document.getElementById('renewForm');
+    form.action = '/sale/contract/renew/' + contractId;
+    document.getElementById('renewRoomInfo').textContent = 'HĐ-' + String(contractId).padStart(3, '0') + ' | Phòng ' + roomNumber + ' (' + address + ')';
+    document.getElementById('renewTenantInfo').textContent = 'Khách thuê: ' + tenantName;
+    document.getElementById('renewCurrentEndDate').textContent = 'Hạn hợp đồng hiện tại: ' + currentEndDate;
+    document.getElementById('renewPrice').value = rentPrice;
+    document.getElementById('renewModal').style.display = 'flex';
+}
+
+function closeRenewModal() {
+    document.getElementById('renewModal').style.display = 'none';
 }
 
 function closeCancelModal() {

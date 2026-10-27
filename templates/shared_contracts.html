@@ -34,7 +34,18 @@
                 {% if contracts %}
                     {% for c in contracts %}
                     <tr>
-                        <td><code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code></td>
+                        <td style="position: relative; vertical-align: middle; min-width: 95px;">
+                            {% if c.IsExpiringSoon %}
+                                <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a;" title="Còn {{ c.DaysRemaining }} ngày là hết hạn">Sắp hết hạn</span>
+                            {% elif c.IsExpired %}
+                                <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">Hết hạn</span>
+                            {% elif c.IsNew %}
+                                <span style="position: absolute; top: 3px; left: 6px; font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 1px 5px; border-radius: 3px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;" title="Hợp đồng mới ký trong vòng 30 ngày">Mới</span>
+                            {% endif %}
+                            <div style="{% if c.IsNew or c.IsExpiringSoon or c.IsExpired %}padding-top: 10px;{% endif %}">
+                                <code>HĐ-{{ "%03d"|format(c.MaHopDong) }}</code>
+                            </div>
+                        </td>
                         <td><span class="badge badge-dangthue">Phòng {{ c.SoPhong }}</span></td>
                         <td>{{ c.DiaChi }} ({{ c.KhuVuc }})</td>
                         <td><strong>{{ c.TenKhach }}</strong></td>

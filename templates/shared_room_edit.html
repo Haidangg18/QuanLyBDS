@@ -55,6 +55,18 @@
         </div>
 
         <div class="form-group">
+            <label for="han_thanh_toan" class="form-label">Hạn ca thanh toán (Ngày thu tiền hàng tháng) *</label>
+            <select id="han_thanh_toan" name="han_thanh_toan" class="form-control" required>
+                <option value="5" {% if room.HanThanhToan == 5 %}selected{% endif %}>Mùng 5 hàng tháng</option>
+                <option value="10" {% if room.HanThanhToan == 10 %}selected{% endif %}>Mùng 10 hàng tháng</option>
+                <option value="15" {% if room.HanThanhToan == 15 %}selected{% endif %}>Mùng 15 hàng tháng</option>
+                <option value="20" {% if room.HanThanhToan == 20 %}selected{% endif %}>Mùng 20 hàng tháng</option>
+                <option value="25" {% if room.HanThanhToan == 25 %}selected{% endif %}>Mùng 25 hàng tháng</option>
+                <option value="30" {% if room.HanThanhToan == 30 %}selected{% endif %}>Mùng 30 hàng tháng</option>
+            </select>
+        </div>
+
+        <div class="form-group">
             <label for="thiet_bi" class="form-label">Mô tả thiết bị hiện tại</label>
             <input type="text" id="thiet_bi" name="thiet_bi" class="form-control" value="{{ room.ThietBi if room.ThietBi else '' }}" placeholder="Ví dụ: vsc - đh, giường gỗ...">
         </div>
