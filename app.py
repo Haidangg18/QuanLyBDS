@@ -87,6 +87,22 @@ def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, g
                 'Chưa xử lý'
             )
         )
+        
+        # Tu dong khoa tai khoan neu nhan vien tich luy >= 7 canh bao do chua xu ly
+        if level == 'Báo động đỏ' and user_id and role_id != 1:
+            red_cnt_row = db.execute(
+                """
+                SELECT COUNT(*) as cnt 
+                FROM AUDIT_LOG 
+                WHERE MaTaiKhoan = ? 
+                  AND PhanLoaiRuiRo = 'Báo động đỏ' 
+                  AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)
+                """, (user_id,)
+            ).fetchone()
+            red_cnt = red_cnt_row['cnt'] if red_cnt_row else 0
+            if red_cnt >= 7:
+                db.execute("UPDATE TAI_KHOAN SET TrangThai = 0 WHERE MaTaiKhoan = ?", (user_id,))
+                print(f"[SECURITY ALERT] Tai khoan #{user_id} da bi TU DONG KHOA do vuot qua 7 canh bao do chua xu ly!")
     except Exception as e: 
         print("Audit Log Error:", str(e))
 
@@ -165,6 +181,22 @@ def inject_thong_bao():
         return dict(recent_thong_bao=[], latest_thong_bao=None, admin_pinned_thong_bao=None, unread_red_alerts_count=red_alerts)
 
 _last_activation_check = 0
+
+@app.before_request
+def check_user_lock_status():
+    if request.path.startswith('/static') or request.endpoint in ('static', 'login', 'logout'):
+        return
+    if 'user_id' in session and session.get('role_id') != 1:
+        try:
+            db_chk = get_db()
+            u_chk = db_chk.execute("SELECT TrangThai FROM TAI_KHOAN WHERE MaTaiKhoan = ?", (session['user_id'],)).fetchone()
+            db_chk.close()
+            if u_chk and u_chk['TrangThai'] == 0:
+                session.clear()
+                flash("Tài khoản của bạn đã bị hệ thống tạm khóa do tích lũy quá 7 cảnh báo đỏ! Vui lòng liên hệ Admin để kiểm toán.", "error")
+                return redirect(url_for('login'))
+        except Exception:
+            pass
 
 @app.before_request
 def check_contract_activation():

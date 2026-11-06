@@ -14,7 +14,7 @@ def normalize_vnd(val):
         return 0.0
 
 def format_vnd_str(val):
-    """Format tiền VNĐ dễ đọc cho con người."""
+    """Format tiền VNĐ """
     v = normalize_vnd(val)
     return f"{v:,.0f}".replace(',', '.') + " đ"
 
@@ -158,14 +158,34 @@ def evaluate_risk(db, user_id, role_id, action, table_name, old_data=None, new_d
             triggered_rules.append({
                 'code': 'FIN_04',
                 'name': 'Khai chi phí vận hành đột biến (> 5.000.000 đ)',
-                'desc': f"Tạo khoản chi {format_vnd_str(expense_amount)} ({new.get('TenChiPhi', 'Chi phí')}) vượt ngưỡng chi thông thông thường.",
+                'desc': f"Tạo khoản chi {format_vnd_str(expense_amount)} ({new.get('TenChiPhi', 'Chi phí')}) vượt ngưỡng chi thông thường.",
                 'score': 70
             })
             recommendations.append("Yêu cầu Quản lý xuất trình hóa đơn VAT, chứng từ mua bán vật tư và ảnh nghiệm thu thực tế trước khi xuất quỹ!")
-        # FIN_04b: Cộng dồn chi phí 30 ngày qua — bắt chiêu micro-slicing
+        # FIN_04b: Cộng dồn chi phí 30 ngày qua (Reset chu kỳ khi Admin đã xác minh/duyệt)
         if user_id and expense_amount > 0:
             try:
                 thirty_days_ago = (now - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+                # Tìm mốc thời gian Admin phê duyệt/xác minh chi phí gần nhất của nhân viên này
+                last_approved_row = db.execute(
+                    """
+                    SELECT MAX(ThoiGian) as moc_duyet
+                    FROM AUDIT_LOG
+                    WHERE MaTaiKhoan = ?
+                      AND BangBiTacDong = 'CHI_PHI'
+                      AND TrangThaiXuLy IN ('Hợp lệ', 'Đã xử lý', 'Đã xác minh')
+                    """, (user_id,)
+                ).fetchone()
+                moc_duyet = None
+                if last_approved_row:
+                    try:
+                        moc_duyet = last_approved_row['moc_duyet']
+                    except Exception:
+                        moc_duyet = last_approved_row[0]
+
+                # Mốc bắt đầu tính cộng dồn: Lấy mốc Admin duyệt gần nhất (nếu có và nằm trong 30 ngày qua)
+                start_time = max(thirty_days_ago, moc_duyet) if moc_duyet else thirty_days_ago
+
                 cumulative_row = db.execute(
                     """
                     SELECT SUM(CAST(json_extract(DuLieuMoi, '$.SoTien') AS REAL)) as tong_chi
@@ -174,21 +194,22 @@ def evaluate_risk(db, user_id, role_id, action, table_name, old_data=None, new_d
                       AND BangBiTacDong = 'CHI_PHI'
                       AND (HanhDong LIKE '%Thêm%' OR HanhDong LIKE '%Tạo%')
                       AND ThoiGian >= ?
-                    """, (user_id, thirty_days_ago)
+                      AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)
+                    """, (user_id, start_time)
                 ).fetchone()
                 try:
                     tong_chi_raw = cumulative_row['tong_chi'] if (hasattr(cumulative_row, '__getitem__') and not isinstance(cumulative_row, tuple)) else cumulative_row[0]
                 except Exception:
                     tong_chi_raw = None
                 tong_chi = normalize_vnd(tong_chi_raw) + expense_amount  # Cộng thêm phiếu đang tạo
-                if tong_chi > 10000000:  # Tổng 30 ngày vượt 10 triệu
+                if tong_chi > 10000000:  # Tổng chu kỳ vượt 10 triệu
                     triggered_rules.append({
                         'code': 'FIN_04b',
-                        'name': 'Chi phí cộng dồn 30 ngày vượt ngưỡng (> 10.000.000 đ)',
-                        'desc': f"Tổng phiếu chi do nhân viên này tạo trong 30 ngày qua đã đạt {format_vnd_str(tong_chi)} (Bao gồm khoản vừa tạo {format_vnd_str(expense_amount)}). Cảnh báo tích lũy chi phí nhiều phiếu nhỏ để vượt qua kiểm soát.",
+                        'name': 'Chi phí cộng dồn vượt ngưỡng cho phép (> 10.000.000 đ)',
+                        'desc': f"Tổng phiếu chi phát sinh chưa qua kiểm toán của nhân viên này đã đạt {format_vnd_str(tong_chi)} (Bao gồm khoản vừa tạo {format_vnd_str(expense_amount)}). Vượt hạn mức ủy quyền định kỳ.",
                         'score': 70
                     })
-                    recommendations.append(f"Rà soát toàn bộ phiếu chi 30 ngày gần nhất của nhân viên này (Tổng {format_vnd_str(tong_chi)}), yêu cầu chứng từ đầy đủ cho từng khoản chi!")
+                    recommendations.append(f"Rà soát toàn bộ phiếu chi gần nhất của nhân viên này (Tổng {format_vnd_str(tong_chi)}), yêu cầu chứng từ đầy đủ cho từng khoản chi!")
             except Exception:
                 pass
 
