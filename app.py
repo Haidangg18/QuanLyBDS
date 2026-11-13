@@ -47,7 +47,7 @@ def log_audit(db, hanh_dong, bang_tac_dong, du_lieu_cu=None, du_lieu_moi=None, g
         role_id = session.get('role_id', 3)
         client_ip = request.remote_addr if request else '127.0.0.1'
         
-        # Đánh giá rủi ro tự động theo 17 quy tắc
+        # Đánh giá rủi ro tự động theo 20 quy tắc
         risk_result = evaluate_risk(
             db=db,
             user_id=user_id,
@@ -623,11 +623,12 @@ def sale_chot_coc(room_id):
             )
             
             # 6. Khóa phòng lập tức ở trạng thái Đang thuê (nếu đã đóng đủ tiền) hoặc Giữ phòng (nếu cọc một phần)
+            # Luu y: Khong duoc de gia thue cua hop dong len GiaThue niem yet cua TAI_SAN!
             room_status = 'DangThue' if trang_thai_hd1 == 'Đã thanh toán' else 'Giữ phòng'
             contract_status = 'Đang kích hoạt' if trang_thai_hd1 == 'Đã thanh toán' else 'Giữ phòng'
             cursor.execute("UPDATE HOP_DONG SET TrangThai = ? WHERE MaHopDong = ?", (contract_status, hop_dong_id))
             cursor.execute(
-                "UPDATE TAI_SAN SET TrangThai = ?, GiaThue = ? WHERE MaTaiSan = ?", (room_status, gia_thue, room_id)
+                "UPDATE TAI_SAN SET TrangThai = ? WHERE MaTaiSan = ?", (room_status, room_id)
             )
             
             # 7. Tự động phát thông báo tức thì lên toàn hệ thống để các Sale khác không tư vấn trùng
