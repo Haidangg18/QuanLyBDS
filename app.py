@@ -306,7 +306,14 @@ def login():
                 flash(f"Chào mừng {user['HoTen']} đã đăng nhập thành công!", "success")
                 return redirect(url_for('index'))
             else:
-                flash("Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin.", "error")
+                red_cnt_chk = db.execute(
+                    "SELECT COUNT(*) as cnt FROM AUDIT_LOG WHERE MaTaiKhoan = ? AND PhanLoaiRuiRo = 'Báo động đỏ' AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)",
+                    (user['MaTaiKhoan'],)
+                ).fetchone()
+                if red_cnt_chk and red_cnt_chk['cnt'] >= 7:
+                    flash("Tài khoản của bạn đã bị hệ thống tạm khóa do tích lũy quá 7 cảnh báo đỏ! Vui lòng liên hệ Admin để kiểm toán.", "error")
+                else:
+                    flash("Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin.", "error")
         else:
             flash("Tên đăng nhập hoặc mật khẩu không chính xác!", "error")
             
