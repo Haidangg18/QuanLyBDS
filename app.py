@@ -294,7 +294,6 @@ def login():
         user = db.execute(
             'SELECT * FROM TAI_KHOAN WHERE TenDangNhap = ?', (username,)
         ).fetchone()
-        db.close()
         
         if user and user['MatKhau'] == password:
             if user['TrangThai'] == 1:
@@ -302,7 +301,7 @@ def login():
                 session['username'] = user['TenDangNhap']
                 session['fullname'] = user['HoTen']
                 session['role_id'] = user['MaVaiTro']
-                
+                db.close()
                 flash(f"Chào mừng {user['HoTen']} đã đăng nhập thành công!", "success")
                 return redirect(url_for('index'))
             else:
@@ -310,11 +309,13 @@ def login():
                     "SELECT COUNT(*) as cnt FROM AUDIT_LOG WHERE MaTaiKhoan = ? AND PhanLoaiRuiRo = 'Báo động đỏ' AND (TrangThaiXuLy = 'Chưa xử lý' OR TrangThaiXuLy IS NULL)",
                     (user['MaTaiKhoan'],)
                 ).fetchone()
+                db.close()
                 if red_cnt_chk and red_cnt_chk['cnt'] >= 7:
                     flash("Tài khoản của bạn đã bị hệ thống tạm khóa do tích lũy quá 7 cảnh báo đỏ! Vui lòng liên hệ Admin để kiểm toán.", "error")
                 else:
                     flash("Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin.", "error")
         else:
+            db.close()
             flash("Tên đăng nhập hoặc mật khẩu không chính xác!", "error")
             
     return render_template('login.html')
