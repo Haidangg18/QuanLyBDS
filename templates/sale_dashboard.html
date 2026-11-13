@@ -11,7 +11,7 @@
 <!-- Thanh công cụ: Thống kê & Tìm kiếm -->
 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch;">
     <!-- Khối KPI tiến độ tháng (thay cho thống kê cũ) -->
-    <div class="card kpi-container-card" style="flex: 1; padding: 0.75rem 1rem; margin-bottom: 0; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07)); border: 1px solid rgba(99,102,241,0.2); min-width: 280px; display: flex; flex-direction: column; justify-content: center;">
+    <div class="card kpi-container-card" style="flex: 1 1 280px; padding: 0.75rem 1rem; margin-bottom: 0; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.07)); border: 1px solid rgba(99,102,241,0.2); display: flex; flex-direction: column; justify-content: center;">
         {% set kpi_percent = (my_deals_this_month / chi_tieu_kpi * 100) if chi_tieu_kpi > 0 else 100 %}
         {% if kpi_percent > 100 %}{% set kpi_percent = 100 %}{% endif %}
         
@@ -34,26 +34,29 @@
             </div>
         </div>
 
-        <!-- Mobile view (super compact single thin line) -->
-        <div class="mobile-only" style="font-size: 0.8rem; font-weight: 700;">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <!-- Mobile view (super compact single thin line + progress bar) -->
+        <div class="mobile-only" style="font-size: 0.82rem; font-weight: 700;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
                 <span><i class="fa-solid fa-bullseye" style="color: var(--accent);"></i> KPI: {{ my_deals_this_month }}/{{ chi_tieu_kpi }} phòng ({{ "{:.0f}".format(kpi_percent) }}%)</span>
                 {% if dat_kpi %}
                     <span style="color: var(--success); font-size: 0.75rem;"><i class="fa-solid fa-check"></i> Đạt Lương Cứng</span>
                 {% else %}
-                    <span style="color: var(--danger); font-size: 0.75rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }} phòng</span>
+                    <span style="color: var(--danger); font-size: 0.75rem;"><i class="fa-solid fa-person-running"></i> Thiếu {{ chi_tieu_kpi - my_deals_this_month }}</span>
                 {% endif %}
+            </div>
+            <div style="height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                <div style="height: 100%; width: {{ kpi_percent }}%; background: {% if dat_kpi %}var(--success){% else %}var(--accent){% endif %};"></div>
             </div>
         </div>
     </div>
 
     <!-- Khối tìm kiếm & Lọc -->
-    <div class="card search-filter-container" style="flex: 2; padding: 1rem; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem; min-width: 350px;">
+    <div class="card search-filter-container" style="flex: 2 1 300px; padding: 0.85rem; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;">
         <!-- Thanh tìm kiếm văn bản và nút Lọc trên mobile -->
         <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
-            <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.8rem; width: 100%;">
+            <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.45rem 0.75rem; width: 100%;">
                 <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary);"></i>
-                <input type="text" id="search-input" placeholder="Nhập địa chỉ nhà, số phòng để tìm nhanh..." onkeyup="filterRooms()" style="border: none; outline: none; background: transparent; width: 100%; font-size: 0.95rem; font-family: inherit; color: var(--text-primary);">
+                <input type="text" id="search-input" placeholder="Nhập địa chỉ nhà, số phòng để tìm nhanh..." onkeyup="filterRooms()" style="border: none; outline: none; background: transparent; width: 100%; font-size: 1rem; font-family: inherit; color: var(--text-primary);">
             </div>
             <!-- Nút Toggle Bộ lọc (Chỉ hiển thị trên Mobile) -->
             <button type="button" class="mobile-only btn btn-secondary" onclick="toggleMobileFilters()" style="padding: 0.5rem 0.8rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #cbd5e1;">
@@ -112,7 +115,7 @@
                         <td style="text-align: center;">{{ loop.index }}</td>
                         <td>{{ r.DiaChi }}</td>
                         <td><span class="badge badge-trong badge-trong-desktop" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">{% if r.MaLoaiTaiSan == 1 %}Phòng {% endif %}{{ r.SoPhong }}</span></td>
-                        <td style="font-weight: 700; color: var(--accent);">{{ r.GiaThue | format_vnd }}</td>
+                        <td style="font-weight: 700;">{{ "{:,.2f}".format(r.GiaThue) }}</td>
                         <td>{{ r.GhiChu if r.GhiChu else '-' }}</td>
                         <td>
                             {% if r.ThietBi %}
@@ -123,7 +126,7 @@
                         </td>
                         <td><strong>{{ r.TenNhanVienChotCu if r.TenNhanVienChotCu else '-' }}</strong></td>
                         <td>{{ r.NgayTrong if r.NgayTrong else '-' }}</td>
-                        <td style="color: var(--success); font-weight: 700;">{{ r.HoaHong | format_vnd }}</td>
+                        <td style="color: var(--success); font-weight: 700;">{{ "{:,.2f}".format(r.HoaHong) }}</td>
                         <td style="text-align: center;">
                             <a href="{{ url_for('sale_chot_coc', room_id=r.MaTaiSan) }}" class="btn btn-primary btn-sm" style="width: 100%; background: linear-gradient(135deg, var(--accent), #0077b6);">
                                 <i class="fa-solid fa-handshake"></i> Chốt khách

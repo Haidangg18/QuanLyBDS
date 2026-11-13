@@ -10,7 +10,7 @@
 
 <!-- Hệ thống Tab điều hướng -->
 <div class="card" style="padding: 0.5rem; margin-bottom: 1.5rem;">
-    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <div class="tabs-nav-scroll" style="display: flex; gap: 0.5rem;">
         <button class="btn tab-btn active" id="tab-bookings-btn" onclick="switchTab('bookings')">
             <i class="fa-solid fa-receipt"></i> Phiếu Chốt Đang Cọc ({{ bookings|length }})
         </button>
@@ -94,27 +94,45 @@
                     {% for b in bookings %}
                     <div class="room-card">
                         <div class="room-card-header">
-                            <span class="room-card-title">Phòng {{ b.SoPhong }}</span>
-                            <span class="badge badge-datcoc">Giữ phòng</span>
+                            <span class="room-card-area">{{ b.KhuVuc }}</span>
+                            <span class="room-card-number">Phòng {{ b.SoPhong }}</span>
                         </div>
-                        <div class="room-card-body">
-                            <div style="margin-bottom: 0.25rem;"><strong>Khách:</strong> {{ b.TenKhach }} ({{ b.SoDienThoaiKhach }})</div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Địa chỉ:</strong> {{ b.DiaChi }}</div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Giá thuê:</strong> <span style="color: var(--accent); font-weight: 700;">{{ b.GiaThue | format_vnd }}</span></div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Tiền cọc:</strong> <span style="color: var(--warning); font-weight: 700;">{{ b.TienCoc | format_vnd }}</span></div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Ngày chốt:</strong> {{ b.NgayChot }} | <strong>Vào ở:</strong> {{ b.NgayDuKienVaoO }}</div>
-                            <div><strong>Điện đầu vào:</strong> {{ b.SoDienDauVao }} kWh</div>
+                        <div class="room-card-address">
+                            <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> {{ b.DiaChi }}
+                        </div>
+                        <div class="room-card-financials">
+                            <div class="financial-item">
+                                <span class="fin-label">Giá thuê chốt</span>
+                                <strong class="fin-value" style="color: var(--accent);">{{ b.GiaThue | format_vnd }}</strong>
+                            </div>
+                            <div class="financial-item">
+                                <span class="fin-label">Tiền cọc giữ phòng</span>
+                                <strong class="fin-value" style="color: var(--warning-text, #d97706);">{{ b.TienCoc | format_vnd }}</strong>
+                            </div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.02); border: 1px solid rgba(15, 23, 42, 0.04); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.84rem; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fa-solid fa-user" style="color: #64748b; width: 16px;"></i> Khách: <strong>{{ b.TenKhach }}</strong></span>
+                                <a href="tel:{{ b.SoDienThoaiKhach }}" style="color: var(--accent); font-weight: 600; text-decoration: none;"><i class="fa-solid fa-phone"></i> {{ b.SoDienThoaiKhach }}</a>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fa-regular fa-calendar-check" style="color: #64748b; width: 16px;"></i> Chốt: {{ b.NgayChot }}</span>
+                                <span><i class="fa-solid fa-person-shelter" style="color: #64748b; width: 16px;"></i> Vào ở: <strong>{{ b.NgayDuKienVaoO }}</strong></span>
+                            </div>
+                            <div>
+                                <i class="fa-solid fa-bolt" style="color: #eab308; width: 16px;"></i> Số điện chốt: <strong>{{ b.SoDienDauVao }} kWh</strong>
+                            </div>
                             {% if b.GhiChu %}
-                                <div style="border-top: 1px dashed rgba(15, 23, 42, 0.05); padding-top: 0.4rem; margin-top: 0.4rem; font-style: italic; color: var(--text-secondary);">
-                                    <i class="fa-solid fa-comment-dots"></i> {{ b.GhiChu }}
-                                </div>
+                            <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.35rem; font-style: italic; color: var(--text-secondary);">
+                                <i class="fa-regular fa-comment-dots"></i> {{ b.GhiChu }}
+                            </div>
                             {% endif %}
                         </div>
                         <div class="room-card-action" style="display: flex; gap: 0.5rem;">
-                            <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="flex: 1; background: #e2e8f0; border-color: #cbd5e1; text-align: center;">
+                            <a href="{{ url_for('sale_booking_edit', deal_id=b.MaChotKhach) }}" class="btn btn-secondary btn-sm" style="flex: 1; padding: 0.5rem; text-align: center; font-weight: 600;">
                                 <i class="fa-solid fa-pen-to-square"></i> Sửa cọc
                             </a>
-                            <button type="button" class="btn btn-sm" onclick="openCancelModal('{{ b.MaChotKhach }}', '{{ b.SoPhong }}', '{{ b.DiaChi }}', '{{ b.TenKhach }}', '{{ b.TienCoc | format_vnd }}')" style="flex: 1; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;" title="Hủy phiếu cọc">
+                            <button type="button" class="btn btn-sm" onclick="openCancelModal('{{ b.MaChotKhach }}', '{{ b.SoPhong }}', '{{ b.DiaChi }}', '{{ b.TenKhach }}', '{{ b.TienCoc | format_vnd }}')" style="flex: 1; padding: 0.5rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-weight: 600;" title="Hủy phiếu cọc">
                                 <i class="fa-solid fa-ban"></i> Hủy cọc
                             </button>
                         </div>
@@ -330,7 +348,7 @@
                     {% for t in tenants %}
                     <div class="room-card">
                         <div class="room-card-header">
-                            <span class="room-card-number" style="font-size: 1.2rem;">{{ t.HoTen }}</span>
+                            <span class="room-card-number" style="font-size: 1.15rem; font-weight: 700;">{{ t.HoTen }}</span>
                             {% if t.TrangThaiHopDong == 'Giữ phòng' %}
                                 <span class="badge badge-datcoc">Giữ phòng {{ t.SoPhong }}</span>
                             {% elif t.TrangThaiHopDong == 'Đang kích hoạt' %}
@@ -339,14 +357,22 @@
                                 <span class="badge badge-secondary">Bỏ cọc / Rời đi</span>
                             {% endif %}
                         </div>
-                        <div style="background: rgba(15, 23, 42, 0.015); border: 1px solid rgba(15, 23, 42, 0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; margin-bottom: 0.5rem;">
-                            <div style="margin-bottom: 0.25rem;">
-                                <strong>Điện thoại:</strong> 
-                                <a href="tel:{{ t.SoDienThoai }}" style="text-decoration: none; color: var(--accent);"><i class="fa-solid fa-phone"></i> {{ t.SoDienThoai }}</a>
+                        <div style="background: rgba(15, 23, 42, 0.02); border: 1px solid rgba(15, 23, 42, 0.04); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.84rem; display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fa-solid fa-phone" style="color: var(--accent); width: 16px;"></i> Điện thoại:</span>
+                                <a href="tel:{{ t.SoDienThoai }}" style="text-decoration: none; color: var(--accent); font-weight: 600;">{{ t.SoDienThoai }}</a>
                             </div>
-                            <div style="margin-bottom: 0.25rem;"><strong>CCCD:</strong> {{ t.CCCD if t.CCCD else '-' }}</div>
-                            <div style="margin-bottom: 0.25rem;"><strong>Địa chỉ nhà:</strong> {{ t.DiaChiRoom }}</div>
-                            <div><strong>Hợp đồng:</strong> <code>HĐ-{{ "%03d"|format(t.MaHopDong) }}</code></div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span><i class="fa-solid fa-id-card" style="color: #64748b; width: 16px;"></i> CCCD:</span>
+                                <strong>{{ t.CCCD if t.CCCD else 'Chưa cập nhật' }}</strong>
+                            </div>
+                            <div>
+                                <i class="fa-solid fa-location-dot" style="color: #64748b; width: 16px;"></i> Địa chỉ: {{ t.DiaChiRoom }}
+                            </div>
+                            <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.3rem; display: flex; justify-content: space-between;">
+                                <span>Hợp đồng liên kết:</span>
+                                <code>HĐ-{{ "%03d"|format(t.MaHopDong) }}</code>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -360,7 +386,7 @@
 
 <!-- Modal Xác Nhận Hủy Phiếu Cọc (Khách Bỏ Cọc) -->
 <div id="cancelModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="modal-box-responsive" style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #dc2626; font-weight: 700;">
                 <i class="fa-solid fa-triangle-exclamation"></i> Hủy Phiếu Cọc (Khách Bỏ Cọc)
@@ -398,7 +424,7 @@
 
 <!-- Modal Gia Hạn Hợp Đồng (+60k Hoa Hồng) -->
 <div id="renewModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; width: 90%; max-width: 520px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="modal-box-responsive" style="background: white; border-radius: 12px; width: 90%; max-width: 520px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
             <h3 style="margin: 0; font-size: 1.15rem; color: var(--accent); font-weight: 700;">
                 <i class="fa-solid fa-arrows-rotate"></i> Gia Hạn Hợp Đồng Thuê

@@ -7,6 +7,16 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_antigravity_key_for_session'
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
+
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 DATABASE = os.path.join(os.path.dirname(__file__), 'db', 'MyDatabase.db')
 
@@ -297,6 +307,7 @@ def login():
         
         if user and user['MatKhau'] == password:
             if user['TrangThai'] == 1:
+                session.clear()
                 session['user_id'] = user['MaTaiKhoan']
                 session['username'] = user['TenDangNhap']
                 session['fullname'] = user['HoTen']
@@ -310,13 +321,17 @@ def login():
                     (user['MaTaiKhoan'],)
                 ).fetchone()
                 db.close()
+                session.clear()
                 if red_cnt_chk and red_cnt_chk['cnt'] >= 7:
                     flash("Tài khoản của bạn đã bị hệ thống tạm khóa do tích lũy quá 7 cảnh báo đỏ! Vui lòng liên hệ Admin để kiểm toán.", "error")
                 else:
                     flash("Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin.", "error")
         else:
             db.close()
+            session.clear()
             flash("Tên đăng nhập hoặc mật khẩu không chính xác!", "error")
+            
+        return render_template('login.html', entered_username=username)
             
     return render_template('login.html')
 
@@ -349,9 +364,16 @@ def sale_dashboard():
     ).fetchall()
     empty_rooms_count = len(empty_rooms)
     
-    # Khối 2: Tổng số lượt chốt khách thành công của tài khoản Sale này
+    # Khối 2: Tổng số lượt chốt khách thành công của tài khoản Sale này (Chỉ tính HĐ đã thanh toán đủ / kích hoạt)
     my_deals_count = db.execute(
-        "SELECT COUNT(*) FROM THONG_TIN_CHOT_KHACH WHERE MaTaiKhoanChot = ?", (user_id,)
+        """
+        SELECT COUNT(*) 
+        FROM THONG_TIN_CHOT_KHACH tk
+        LEFT JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
+        WHERE tk.MaTaiKhoanChot = ? 
+          AND hd.TrangThai IN ('Đang kích hoạt', 'Đã kết thúc')
+          AND (tk.TrangThai != 'Bỏ cọc' OR tk.TrangThai IS NULL)
+        """, (user_id,)
     ).fetchone()[0]
     
     # Khối 3: Danh sách phòng chốt toàn hệ thống
@@ -387,8 +409,12 @@ def sale_dashboard():
         
     my_deals_this_month = db.execute(
         """
-        SELECT COUNT(*) FROM THONG_TIN_CHOT_KHACH 
-        WHERE MaTaiKhoanChot = ? AND NgayChot >= ? AND NgayChot < ?
+        SELECT COUNT(*) 
+        FROM THONG_TIN_CHOT_KHACH tk
+        LEFT JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
+        WHERE tk.MaTaiKhoanChot = ? AND tk.NgayChot >= ? AND tk.NgayChot < ?
+          AND hd.TrangThai IN ('Đang kích hoạt', 'Đã kết thúc')
+          AND (tk.TrangThai != 'Bỏ cọc' OR tk.TrangThai IS NULL)
         """, (user_id, start_date, end_date)
     ).fetchone()[0]
     
@@ -1033,8 +1059,16 @@ def sale_salary():
         """, (user_id, start_date, end_date)
     ).fetchall()
     
-    so_phong_chot = len(deals)
-    hoa_hong_chot = sum(float(d['HoaHongTaiSan'] or 0.0) for d in deals)
+    # CHỈ TÍNH KPI VÀ HOA HỒNG CHO CÁC PHÒNG ĐÃ THANH TOÁN ĐỦ (Hợp đồng 'Đang kích hoạt' hoặc 'Đã kết thúc')
+    # Giữ phòng hoặc Bỏ cọc thì KHÔNG ĐƯỢC TÍNH vào KPI và hoa hồng
+    paid_deals = [
+        d for d in deals 
+        if d['TrangThaiHopDong'] in ('Đang kích hoạt', 'Đã kết thúc') 
+        and d['TrangThai'] != 'Bỏ cọc'
+    ]
+    
+    so_phong_chot = len(paid_deals)
+    hoa_hong_chot = sum(float(d['HoaHongTaiSan'] or 0.0) for d in paid_deals)
     
     so_gia_han = len(renewals)
     hoa_hong_gia_han = sum(float(r['HoaHongGiaHan'] or 60.0) for r in renewals)
@@ -1054,7 +1088,10 @@ def sale_salary():
                SUM(ts.HoaHong) as total_hh 
         FROM THONG_TIN_CHOT_KHACH tk 
         JOIN TAI_SAN ts ON tk.MaTaiSan = ts.MaTaiSan 
+        LEFT JOIN HOP_DONG hd ON tk.MaHopDong = hd.MaHopDong
         WHERE tk.MaTaiKhoanChot = ? AND tk.NgayChot >= ? AND tk.NgayChot < ?
+          AND hd.TrangThai IN ('Đang kích hoạt', 'Đã kết thúc')
+          AND (tk.TrangThai != 'Bỏ cọc' OR tk.TrangThai IS NULL)
         GROUP BY Thang
         """, (user_id, year_start, year_end)
     ).fetchall()
@@ -2144,8 +2181,10 @@ def shared_tracking():
     for b in bookings:
         sale_id = b['MaTaiKhoanChot']
         if sale_id in salary_summary_dict:
-            salary_summary_dict[sale_id]['SoPhongChot'] += 1
-            salary_summary_dict[sale_id]['HoaHong'] += float(b['HoaHongTaiSan'] or 0.0)
+            # Chỉ tính phòng chốt và hoa hồng khi hợp đồng đã thanh toán đủ / kích hoạt thành công (không tính Giữ phòng hoặc Bỏ cọc)
+            if (b['TrangThaiHopDong'] in ('Đang kích hoạt', 'Đã kết thúc')) and (b['TrangThai'] != 'Bỏ cọc'):
+                salary_summary_dict[sale_id]['SoPhongChot'] += 1
+                salary_summary_dict[sale_id]['HoaHong'] += float(b['HoaHongTaiSan'] or 0.0)
 
     # Bổ sung hoa hồng từ các lượt gia hạn hợp đồng thành công (+60k/HĐ)
     renewals_data = db.execute(

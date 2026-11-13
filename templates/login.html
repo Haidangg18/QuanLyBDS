@@ -10,15 +10,29 @@
             <p class="login-subtitle">Hệ thống quản lý bất động sản cho thuê</p>
         </div>
 
-        <form action="{{ url_for('login') }}" method="POST">
+        <!-- Dải thông báo Flash Alert nổi bật trực tiếp trong Card -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="login-alerts" style="margin-bottom: 1.25rem;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }}" style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.88rem; line-height: 1.45; {% if category == 'error' %}background: #fee2e2; border: 1.5px solid #ef4444; color: #991b1b; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);{% endif %}">
+                        <i class="fa-solid {{ 'fa-triangle-exclamation' if category == 'error' else 'fa-circle-check' if category == 'success' else 'fa-circle-info' }}" style="font-size: 1.2rem; margin-top: 1px; color: {% if category == 'error' %}#dc2626{% else %}#16a34a{% endif %}; flex-shrink: 0;"></i>
+                        <span style="font-weight: 600;">{{ message }}</span>
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('login') }}" method="POST" autocomplete="off">
             <div class="form-group">
                 <label for="username" class="form-label">Tên đăng nhập</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Nhập tên đăng nhập..." required autofocus>
+                <input type="text" id="username" name="username" class="form-control" value="{{ entered_username or '' }}" placeholder="Nhập tên đăng nhập..." required autofocus autocomplete="off">
             </div>
             
             <div class="form-group">
                 <label for="password" class="form-label">Mật khẩu</label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Nhập mật khẩu..." required>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Nhập mật khẩu..." required autocomplete="new-password">
             </div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">

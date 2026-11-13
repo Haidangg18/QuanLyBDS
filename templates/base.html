@@ -4,11 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hệ thống Quản lý Bất động sản{% endblock %}</title>
-    <!-- CSS Tùy chỉnh (v=10.0) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=10.0">
+    <!-- CSS Tùy chỉnh (v=1003.0) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1003.0">
     <!-- Biểu tượng Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* ==========================================================
+           NAVBAR DESKTOP & MOBILE
+           - Desktop: Menu links nằm sát bên trái (ngay sau Logo),
+                      cụm User & Đăng xuất nằm dạt sang mép phải (margin-left: auto).
+           - Mobile: MẶC ĐỊNH ĐÓNG (display: none !important).
+                     Bấm 3 gạch mở ra (.active) mới hiển thị (display: flex !important).
+           ========================================================== */
+        @media (min-width: 993px) {
+            .menu-toggle {
+                display: none !important;
+            }
+            .nav-menu {
+                display: flex !important;
+                align-items: center;
+                gap: 0.35rem;
+                list-style: none;
+                flex-wrap: nowrap;
+                margin: 0 0 0 1.5rem;
+                padding: 0;
+                flex: 1;
+            }
+            .nav-user-item {
+                margin-left: auto;
+                list-style: none;
+                display: flex;
+                align-items: center;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .navbar-container {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                flex-wrap: wrap !important;
+            }
+            .menu-toggle {
+                display: block !important;
+                margin-left: auto !important;
+                order: 2 !important;
+                cursor: pointer;
+            }
+            /* MẶC ĐỊNH TRÊN MOBILE: MENU ĐÓNG VÀ ẨN HOÀN TOÀN */
+            .nav-menu {
+                display: none !important;
+                order: 3 !important;
+                flex: none !important;
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-top: 0.75rem !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0 !important;
+                background: #ffffff !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+                padding: 0.75rem 0.5rem !important;
+            }
+            /* KHI BẤM DẤU 3 GẠCH: THÊM CLASS .active MỚI ĐƯỢC HIỆN */
+            .nav-menu.active {
+                display: flex !important;
+            }
+            .nav-menu li {
+                width: 100% !important;
+            }
+            .nav-user-item {
+                order: -1 !important;
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-bottom: 0.65rem !important;
+                padding-bottom: 0.65rem !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                display: block !important;
+            }
+            .nav-user-item .user-nav-box {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                width: 100% !important;
+                gap: 0.5rem !important;
+            }
+            .nav-user-item .user-badge-pill {
+                flex: 1 !important;
+                justify-content: center !important;
+                padding: 0.45rem 0.65rem !important;
+                font-size: 0.85rem !important;
+            }
+            .nav-user-item .btn-logout {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 0.35rem !important;
+                padding: 0.45rem 0.85rem !important;
+                white-space: nowrap !important;
+                font-size: 0.85rem !important;
+            }
+            .nav-user-item .btn-logout span {
+                display: inline !important;
+            }
+        }
         .nav-alert-badge {
             display: inline-flex;
             align-items: center;
@@ -65,7 +165,7 @@
                 </div>
             </a>
             
-            <button class="menu-toggle" id="mobile-menu-btn">
+            <button class="menu-toggle" id="mobile-menu-btn" aria-label="Menu điều hướng">
                 <i class="fa-solid fa-bars"></i>
             </button>
 
@@ -102,32 +202,51 @@
                         {% endif %}
                     </a></li>
                 {% endif %}
-            </ul>
 
-            <!-- Cụm Tài Khoản & Nút Đăng Xuất (Bên Phải Không Bao Giờ Bị Che) -->
-            <div class="user-nav-box">
-                <div class="user-badge-pill">
-                    <i class="fa-regular fa-user" style="color: #64748b;"></i>
-                    <span class="user-name">{{ session.get('fullname') }}</span>
-                    {% if session.get('role_id') == 1 %}
-                        <span class="user-role role-admin">Admin</span>
-                    {% elif session.get('role_id') == 2 %}
-                        <span class="user-role role-manager">Vận hành</span>
-                    {% elif session.get('role_id') == 3 %}
-                        <span class="user-role role-sale">Sale</span>
-                    {% endif %}
-                </div>
-                <a href="{{ url_for('logout') }}" class="btn-logout" title="Đăng xuất khỏi hệ thống">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                    <span>Đăng xuất</span>
-                </a>
-            </div>
+                <!-- Cụm Tài Khoản & Nút Đăng Xuất nằm TRỌN VẸN BÊN TRONG menu dấu 3 gạch -->
+                <li class="nav-user-item">
+                    <div class="user-nav-box">
+                        <div class="user-badge-pill">
+                            <i class="fa-regular fa-user" style="color: #64748b;"></i>
+                            <span class="user-name">{{ session.get('fullname') }}</span>
+                            {% if session.get('role_id') == 1 %}
+                                <span class="user-role role-admin">Admin</span>
+                            {% elif session.get('role_id') == 2 %}
+                                <span class="user-role role-manager">Vận hành</span>
+                            {% elif session.get('role_id') == 3 %}
+                                <span class="user-role role-sale">Sale</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('logout') }}" class="btn-logout" title="Đăng xuất khỏi hệ thống">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span>Đăng xuất</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
         </div>
     </nav>
     <script>
-        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
-            document.getElementById('nav-menu').classList.toggle('active');
-        });
+        (function() {
+            var btn = document.getElementById('mobile-menu-btn');
+            var menu = document.getElementById('nav-menu');
+            if (!btn || !menu) return;
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                menu.classList.toggle('active');
+            });
+
+            // Bấm ra ngoài khoảng menu thì tự động đóng lại
+            document.addEventListener('click', function(e) {
+                if (menu.classList.contains('active')) {
+                    if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                        menu.classList.remove('active');
+                    }
+                }
+            });
+        })();
     </script>
     {% endif %}
 
@@ -169,11 +288,11 @@
 
             <div style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
                 {% if recent_thong_bao|length > 1 %}
-                <button type="button" onclick="prevTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin trước">&lsaquo;</button>
-                <button type="button" onclick="nextTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin tiếp theo">&rsaquo;</button>
+                <button type="button" class="desktop-only" onclick="prevTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin trước">&lsaquo;</button>
+                <button type="button" class="desktop-only" onclick="nextTickerSlide(event)" style="background: white; border: 1px solid #fde68a; color: #b45309; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.75rem; cursor: pointer;" title="Tin tiếp theo">&rsaquo;</button>
                 {% endif %}
                 <button type="button" onclick="openNotificationModal()" style="background: white; border: 1px solid #fde68a; color: #b45309; font-weight: 600; font-size: 0.78rem; border-radius: 4px; padding: 0.18rem 0.55rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;" title="Xem tất cả bản tin">
-                    <i class="fa-solid fa-list-ul"></i> Tất cả ({{ recent_thong_bao|length }})
+                    <i class="fa-solid fa-list-ul"></i> <span class="desktop-only">Tất cả ({{ recent_thong_bao|length }})</span>
                 </button>
                 <button type="button" onclick="document.getElementById('systemNotificationBar').style.display='none';" style="background: none; border: none; color: #b45309; font-size: 1.1rem; cursor: pointer; padding: 0 0.25rem; line-height: 1;" title="Ẩn thanh bản tin">&times;</button>
             </div>
@@ -260,6 +379,7 @@
         {% endif %}
 
         <!-- Thông báo Alert Flask Flash -->
+        {% if request.endpoint != 'login' %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -270,6 +390,7 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        {% endif %}
 
         {% block content %}{% endblock %}
     </main>
